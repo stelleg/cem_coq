@@ -1,7 +1,6 @@
 Require Vector.
-Require Vectors.Fin.
 Require Import List.
-Require Import Expr.
+Require Import expr_db.
 
 Inductive closure : Type :=
   | close : forall n, expr n -> Vector.t closure n -> closure.
@@ -19,9 +18,6 @@ Definition krivine (st : krivine_state) : option krivine_state :=
       end
     end
   end.
-
-Example term_1 : expr 0 := lam 0 (var 1 Fin.F1).
-Example term_2 : expr 0 := app 0 term_1 term_1.
 
 Definition krivine_relation : krivine_state -> option krivine_state -> Prop :=
   fun (st : krivine_state) (st' : option krivine_state) => st' = krivine st.
