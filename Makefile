@@ -1,0 +1,3 @@
+COQC := coqc
+%: %.v
+	${COQC} $<
