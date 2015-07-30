@@ -1,4 +1,4 @@
-Require Import expr_db_nat.
+Require Import expr_db_nat SfLib.
 Require Import Unicode.Utf8_core.
 
 Definition append := Datatypes.app.
@@ -28,11 +28,36 @@ Inductive cactus_lookup : nat -> nat -> heap -> nat -> Prop :=
 
 Reserved Notation " c1 '⇓' c2 " (at level 50).
 Inductive step : configuration -> configuration -> Prop :=
-  | Id : ∀ M V x y z Φ Ψ Υ v, cactus_lookup v z Φ x -> ⟨Φ⟩M ⇓ ⟨Ψ⟩V ->
-      ⟨Φ, x ↦ {M, y}, Υ⟩close (var v) z ⇓ ⟨Ψ, x ↦ {V, y}, Υ⟩V
+  | Id : ∀ M B x y z Φ Ψ Υ v e, 
+      cactus_lookup v z (Υ ++ (x ↦ {M,y} :: Φ)) x -> 
+                    ⟨Φ⟩M ⇓ ⟨Ψ⟩close (:λB) e ->
+      ⟨Φ, x ↦ {M, y}, Υ⟩close (var v) z ⇓ ⟨Ψ, x ↦ {close (:λB) e, y}, Υ⟩close (:λB) e
   | Abs : ∀ N Φ e, ⟨Φ⟩close (:λN) e ⇓ ⟨Φ⟩close (:λN) e
-  | App : ∀ N M Φ Ψ Υ V f e ne, ⟨Φ⟩close M e ⇓ ⟨Ψ⟩close (:λN) ne ->
-      ⟨Ψ, f ↦ {close M e, ne}⟩close N f ⇓ ⟨Υ⟩V -> 
-              ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩V
+  | App : ∀ N M B B' Φ Ψ Υ f e ne ae, 
+          ⟨Φ⟩close M e ⇓ ⟨Ψ⟩close (:λB) ne ->
+      ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓ ⟨Υ⟩close (:λB') ae  -> 
+              ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩close (:λB') ae
 where " c1 '⇓' c2 " := (step c1 c2).
+
+Tactic Notation "step_cases" tactic(first) ident(c) :=
+  first;
+  [ Case_aux c "Id" 
+  | Case_aux c "Abs"
+  | Case_aux c "App"
+  ].
+
+Hint Constructors step.
+
+Example simple : (step (⟨nil⟩ close (:λ0 @ :λ0) 0) (⟨nil, 0 ↦ {close (:λ0) 0,
+0}⟩ close (:λ0) 0)).
+apply App with 0 nil 0 0.
+apply Abs.
+rewrite <- app_nil_l with (prod nat cell) (cons (0↦{close (:λ0) 0, 0}) nil).
+apply Id.
+apply zero.
+apply Abs. 
+Qed.
+
+Lemma values_only : ∀ c e M Ψ, c ⇓ ⟨Ψ⟩close M e -> value M.
+intros. inversion H; simpl; auto. Qed.
 
