@@ -14,8 +14,4 @@ Inductive state_rel : relation cem.configuration cbn.configuration :=
 Theorem cem_cbn_bisim : bisim state_rel cem.step cbn.step.
 unfold bisim.
 intros. split. 
-  intros. induction H0. apply IHstep in H. induction H. induction H. inversion H0. subst. 
-assert app_cons_not_nil. rewrite <-
-app_cons_not_nil in H. 
-destruct H0. inversion H. rewrite app_cons_not_nil in H.
-assert False. destruct H0. 
+  intros. inversion H.  

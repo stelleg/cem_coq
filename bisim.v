@@ -12,6 +12,10 @@ Definition bisim {P Q}
 (* definition on a single set S = P = Q *)
 Definition bisim' {S} (R : relation S S) (a : transition S) := @bisim S S R a a.
 
+Inductive refl_trans_clos {X} (f : transition X) : transition X := 
+  | t_refl (x : X) : refl_trans_clos f x x
+  | t_step (x y z : X) : f x y -> refl_trans_clos f y z -> refl_trans_clos f x z.
+
 (* p and q are bisimilar *)
 Notation "p '~' q" := (ex (fun t => let (r, a, b) := t in @bisim _ _ p q r a b)) (at level 30). 
 
