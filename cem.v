@@ -1,5 +1,5 @@
-Require Import expr_db_nat SfLib.
-Require Import Unicode.Utf8_core.
+Require Import expr_db_nat.
+Require Import List Unicode.Utf8_core.
 
 Definition append := Datatypes.app.
 
@@ -38,15 +38,6 @@ Inductive step : configuration -> configuration -> Prop :=
       ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓ ⟨Υ⟩close (:λB') ae  -> 
               ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩close (:λB') ae
 where " c1 '⇓' c2 " := (step c1 c2).
-
-Tactic Notation "step_cases" tactic(first) ident(c) :=
-  first;
-  [ Case_aux c "Id" 
-  | Case_aux c "Abs"
-  | Case_aux c "App"
-  ].
-
-Hint Constructors step.
 
 Example simple : (step (⟨nil⟩ close (:λ0 @ :λ0) 0) (⟨nil, 0 ↦ {close (:λ0) 0,
 0}⟩ close (:λ0) 0)).
