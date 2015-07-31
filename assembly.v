@@ -47,6 +47,3 @@ Definition Registers := Reg -> Word.
 Inductive State := 
   | st : Registers -> Program -> Stack -> Heap -> State.
 
-Inductive Step : State -> State -> Prop :=
-  | step : forall r p s h, r IP = iop l add,  st r p s h -> st r' p s h -> State.
-

@@ -23,8 +23,8 @@ Notation " ⟨ Ψ , b ⟩ N " := (st (cons b Ψ) N) (at level 40).
 Notation " ⟨ Φ , b , Ψ ⟩ N " := (st (Datatypes.app Ψ (cons b Φ)) N) (at level 40).
 
 Reserved Notation "'[' x '//' y ']' t" (at level 20).
-Fixpoint subst (x x' : id) (t : tm) : tm := match t with
-  | var y => if eq_nat_dec y x then x else t
+Fixpoint subst (x : id) (x' : tm) (t : tm) : tm := match t with
+  | var y => if eq_nat_dec y x then x' else t
   | m@n => [x'//x]m @ [x'//x]n
   | :λy,b => if eq_nat_dec y x then t else (:λy,[x'//x]b)
   end
@@ -34,7 +34,7 @@ where " '[' x '//' y ']' t " := (subst y x t).
 Reserved Notation " c1 '⇓' c2 " (at level 50).
 Inductive step : configuration -> configuration -> Prop :=
   | Id : ∀ M N y x Φ Ψ Υ, ⟨Φ⟩M ⇓ ⟨Ψ⟩:λy,N ->
-          ⟨Φ, x ↦ M, Υ⟩x ⇓ ⟨Ψ, x ↦ :λy,N, Υ⟩:λy,N
+          ⟨Φ, x ↦ M, Υ⟩var x ⇓ ⟨Ψ, x ↦ :λy,N, Υ⟩:λy,N
   | Abs : ∀ N x Φ, ⟨Φ⟩:λx,N ⇓ ⟨Φ⟩:λx,N
   | App : ∀ M N L B y x x' Φ Ψ Υ,⟨Φ⟩L ⇓ ⟨Ψ⟩:λx,N ->
         ⟨Ψ, x' ↦ M⟩[x'//x]N ⇓ ⟨Υ⟩:λy,B ->
