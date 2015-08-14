@@ -22,8 +22,17 @@ Notation "p '~' q" := (ex (fun t => let (r, a, b) := t in @bisim _ _ p q r a b))
 Definition partial_function {X Y: Type} (R: relation X Y) :=
   forall (x : X) (y1 y2 : Y), R x y1 -> R x y2 -> y1 = y2. 
 
-Definition total_function {X Y: Type} {R: relation X Y} :=
-  forall x : X, exists y : Y, R x y /\ partial_function R. 
+Definition total_function {X Y: Type} (R: relation X Y) :=
+  (forall x : X, exists y : Y, R x y) /\ partial_function R. 
+
+Definition surjective {X Y: Type} (f : X -> Y) : Prop :=
+  forall y: Y, exists x : X, f x = y.
+
+Definition injective {X Y : Type} (f : X -> Y) : Prop :=
+  forall a b: X, f a = f b -> a = b.
+
+Definition bijective {X Y : Type} (f : X -> Y) : Prop :=
+  injective f /\ surjective f.
 
 Definition reflexive {X : Type} (R: relation X X) :=
   forall a : X, R a a.

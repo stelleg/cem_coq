@@ -20,7 +20,6 @@ Fixpoint subst_cbn_config (st : cbn.configuration) : expr.tm := match st with
 
 Fixpoint subst_cem_config (st : cem.configuration) : expr_db_nat.expr := match st with
   | cem.st nil 
-  | 
 
 Theorem cem_cbn_bisim : bisim state_rel cem.step cbn.step.
 unfold bisim.
