@@ -4,9 +4,9 @@ Require Import Unicode.Utf8_core.
 Require Import expr.
 Require Import Arith.Peano_dec.
 
-Definition heap := list (id * tm). 
+Definition heap := list (nat * tm). 
 
-Fixpoint InDomain (i:id) (h:heap) : Prop := match h with
+Fixpoint InDomain (i:nat) (h:heap) : Prop := match h with
   | cons (j,_) tail => j = i \/ InDomain i tail
   | nil => False
   end.
@@ -22,32 +22,35 @@ Notation " ⟨ Φ ⟩ m " := (st Φ m) (at level 40).
 Notation " ⟨ Ψ , b ⟩ N " := (st (cons b Ψ) N) (at level 40).
 Notation " ⟨ Φ , b , Ψ ⟩ N " := (st (Datatypes.app Ψ (cons b Φ)) N) (at level 40).
 
-Reserved Notation "'[' x '//' y ']' t" (at level 20).
-Fixpoint subst (x : id) (x' : tm) (t : tm) : tm := match t with
-  | var y => if eq_nat_dec y x then x' else t
-  | m@n => [x'//x]m @ [x'//x]n
-  | :λy,b => if eq_nat_dec y x then t else (:λy,[x'//x]b)
-  end
-where " '[' x '//' y ']' t " := (subst y x t).
+Definition domain (h:heap) : list nat := @map (nat * tm) nat (@fst nat tm) h.
 
-(* Direct description of Maraist et al. Figure 8 *)
-Reserved Notation " c1 '⇓' c2 " (at level 50).
-Inductive step : configuration -> configuration -> Prop :=
-  | Id : ∀ M N y x Φ Ψ Υ, ⟨Φ⟩M ⇓ ⟨Ψ⟩:λy,N ->
-          ⟨Φ, x ↦ M, Υ⟩var x ⇓ ⟨Ψ, x ↦ :λy,N, Υ⟩:λy,N
-  | Abs : ∀ N x Φ, ⟨Φ⟩:λx,N ⇓ ⟨Φ⟩:λx,N
-  | App : ∀ M N L B y x x' Φ Ψ Υ,⟨Φ⟩L ⇓ ⟨Ψ⟩:λx,N ->
-        ⟨Ψ, x' ↦ M⟩[x'//x]N ⇓ ⟨Υ⟩:λy,B ->
-           ⟨Φ⟩(L@M) ⇓ ⟨Υ⟩:λy,B
-where " c1 '⇓' c2 " := (step c1 c2).
+Lemma head_elem : forall h tail,  elem h (cons h tail).
+  intros. simpl. left. reflexivity. Qed.
 
-Lemma values_only : ∀ c M Ψ, c ⇓ ⟨Ψ⟩M -> value M.
+Definition fresh (n : nat) (e : tm) (h : heap) (d : list nat) := 
+  ~ elem n d
+  /\ ~ elem n (fvs e)
+  /\ ~ elem n (domain h).
+
+(* Direct description of Maraist et al. Figure 8, with amendment from  *)
+Reserved Notation " c1 '⇓' d '#' c2 " (at level 50).
+Inductive step : configuration -> list nat -> configuration -> Prop :=
+  | Id : ∀ M N y x Φ d Ψ Υ, ⟨Φ⟩M ⇓ cons x (List.app (domain Υ) d) # ⟨Ψ⟩:λy,N ->
+          ⟨Φ, x ↦ M, Υ⟩var x ⇓ d # ⟨Ψ, x ↦ :λy,N, Υ⟩:λy,N
+  | Abs : ∀ N x Φ d,  ⟨Φ⟩:λx,N ⇓ d # ⟨Φ⟩:λx,N
+  | App : ∀ M N L B y x x' Φ Ψ Υ d d',
+              fresh x' N Φ d ->
+            ⟨Φ⟩L ⇓ d # ⟨Ψ⟩:λx,N ->
+        ⟨Ψ, x' ↦ M⟩[var x'//x]N ⇓ d' # ⟨Υ⟩:λy,B ->
+           ⟨Φ⟩(L@M) ⇓ d # ⟨Υ⟩:λy,B
+where " c1 '⇓' d '#' c2 " := (step c1 d c2).
+
+Lemma values_only : ∀ c M Ψ d, c ⇓ d # ⟨Ψ⟩M -> value M.
 intros. inversion H; simpl; auto. Qed. 
 
-Example simple (x y :id) : (step (⟨nil⟩ ((:λx,x) @ (:λy,y))) (⟨nil, x ↦ :λy,y⟩ :λy, y)).
-apply App with x x x nil. apply Abs. simpl. destruct eq_nat_dec. rewrite <-
-app_nil_l with (prod id tm) (cons (x↦:λy,y) nil). rewrite <- app_nil_l with
-(prod id tm) (cons (x↦:λy,y) nil). apply Id. apply Abs. unfold not in n.
-assert (x = x). reflexivity. apply n in H. inversion H. Qed. 
-
+Example simple : (step (⟨nil⟩ ((:λ0,0) @ (:λ0,0))) nil (⟨nil, 1 ↦ :λ0,0⟩ :λ0,0)).
+apply App with 0 0 1 nil nil. unfold fresh.  simpl. split; auto. split. unfold
+not. intros. destruct H. inversion H. assumption. auto. apply Abs. simpl. rewrite <-
+app_nil_l with (prod nat tm) (cons (1↦:λ0,0) nil). rewrite <- app_nil_l with
+(prod nat tm) (cons (1↦:λ0,0) nil). apply Id. apply Abs. Qed. 
 
