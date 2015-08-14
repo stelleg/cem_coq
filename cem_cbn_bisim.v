@@ -11,16 +11,16 @@ Inductive state_rel : relation cem.configuration cbn.configuration :=
            cbn.step b b' ->
            state_rel a' b'.
 
-Fixpoint subst_cbn_config (st : cbn.configuration) : expr.tm := match st with
-  | cbn.st vs e => match vs with
-    | nil => e
-    | (x,m)::hs => subst_cbn_config (cbn.st hs (cbn.subst x m e))
-    end
+Lemma ex1 : state_rel (cem.abs (0) 
+
+Fixpoint subst_cbn_config' vs e : expr.tm := match vs with
+  | nil => e
+  | (x,m)::hs => subst_cbn_config' hs (cbn.subst x m e)
   end.
 
-Fixpoint subst_cem_config (st : cem.configuration) : expr_db_nat.expr := match st with
-  | cem.st nil 
-  | 
+Definition subst_cbn_config (st : cbn.configuration) : expr_db_nat.expr := match st with
+  | cbn.st hs e => deBruijn (subst_cbn_config' hs e)
+  end.
 
 Theorem cem_cbn_bisim : bisim state_rel cem.step cbn.step.
 unfold bisim.
