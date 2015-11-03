@@ -38,10 +38,13 @@ Lemma fst_map_fmap_succ : forall xs:list (prod nat nat), map (fun x => fst
 intros. induction xs. auto. simpl. rewrite IHxs. auto. rewrite fst_fmap_succ.
 auto. Qed.  
 
-Theorem db_closed_tm : forall f t e, db t f e -> subset (expr.fvs t) (map (@fst nat nat) f).
+Definition domain (A B : Type) : list (prod A B) -> list A := map (@fst A B). 
+
+Theorem db_closed_tm : forall f t e, db t f e -> subset (expr.fvs t) (domain f).
   intros. 
   induction H.
   simpl.
+  unfold domain.
   rewrite map_app. 
   simpl. 
   rewrite elem_app. 
@@ -51,14 +54,13 @@ Theorem db_closed_tm : forall f t e, db t f e -> subset (expr.fvs t) (map (@fst 
   reflexivity. 
   apply I. 
   simpl. simpl in IHdb. 
+  unfold domain in IHdb.
   rewrite map_map in IHdb. 
   rewrite fst_map_fmap_succ in IHdb.  
   apply subset_filter_cons. assumption.
   simpl.  
   apply app_subset. split; assumption. 
 Qed. 
-
-Definition domain (A B : Type) : list (prod A B) -> list A := map (@fst A B). 
 
 Lemma in_heap : forall (A B : Type) (k : A) (f : list (prod A B)), In k (domain f)
                          -> (exists v, In (k,v) f).
