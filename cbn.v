@@ -1,7 +1,7 @@
 (* Based on figure 8 of ariola et al *) 
 Require Import Lists.List.
 Require Import Unicode.Utf8_core.
-Require Import expr.
+Require Import expr util.
 Require Import Arith.Peano_dec.
 
 Definition heap := list (nat * tm). 

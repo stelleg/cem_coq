@@ -1,5 +1,6 @@
 Require expr expr_db_nat.
 Require Import List Datatypes util.
+Set Implicit Arguments.
 
 Definition fmap_succ (p : prod nat nat) : prod nat nat := match p with
   | (a,b) => (a, S b)
@@ -19,8 +20,8 @@ Inductive db : expr.tm -> list (prod nat nat) -> expr_db_nat.expr -> Prop :=
 
 Definition deBruijn (t:expr.tm) (e:expr_db_nat.expr) : Prop := db t nil e.
 
-Lemma elem_app : forall x xs ys, elem x (List.app xs ys) <-> (elem x xs \/ elem x
-ys).
+Lemma elem_app : forall x xs ys, elem x (List.app xs ys) <-> 
+                                 (elem x xs \/ elem x ys).
 intros. induction xs. simpl. split; intros. apply or_intror. assumption.
 apply or_false in H. assumption. simpl. rewrite IHxs. split;  intros. rewrite
 or_assoc. assumption. rewrite or_assoc in H. assumption. Qed.
@@ -32,8 +33,12 @@ Lemma let_inline :forall (b c:prod nat nat),
 Lemma fst_fmap_succ : forall x, fst (fmap_succ x) = fst x.
 intros. destruct x. simpl. reflexivity. Qed. 
 
-Theorem db_closed : forall f t e, db t f e <-> subset (expr.fvs t) (map (@fst nat nat) f).
-  split.
+Lemma fst_map_fmap_succ : forall xs:list (prod nat nat), map (fun x => fst
+(fmap_succ x)) xs = map (@fst nat nat) xs.
+intros. induction xs. auto. simpl. rewrite IHxs. auto. rewrite fst_fmap_succ.
+auto. Qed.  
+
+Theorem db_closed_tm : forall f t e, db t f e -> subset (expr.fvs t) (map (@fst nat nat) f).
   intros. 
   induction H.
   simpl.
@@ -47,15 +52,19 @@ Theorem db_closed : forall f t e, db t f e <-> subset (expr.fvs t) (map (@fst na
   apply I. 
   simpl. simpl in IHdb. 
   rewrite map_map in IHdb. 
-  rewrite fst_fmap_succ in IHdb.  
-  cbv zeta.  
-  apply X in IHdb. 
-  unfold fst.
-  unfold fst in IHdb.
-  apply app_cons_not_nil in H2. 
-  inversion H2. 
-  subst. 
-  simpl in H0. 
+  rewrite fst_map_fmap_succ in IHdb.  
+  apply subset_filter_cons. assumption.
+  simpl.  
+  apply app_subset. split; assumption. 
+Qed. 
+
+Definition domain (A B : Type) : list (prod A B) -> list A := map (@fst A B). 
+
+Lemma in_heap : forall (A B : Type) (k : A) (f : list (prod A B)), In k (domain f)
+                         -> (exists v, In (k,v) f).
+intros. unfold domain in H. apply in_map_iff with (prod A B) A (@fst A B) f k in
+H. destruct H.  destruct H. destruct H. destruct x. simpl. apply ex_intro with
+b. assumption. Qed. 
 
 (* id = id *)
 Lemma ex1 : db (expr.abs 0 (expr.var 0)) nil (expr_db_nat.lam (expr_db_nat.var 0)).
@@ -70,4 +79,5 @@ apply dbAbs. simpl. rewrite <- app_nil_l with (prod nat nat) ((0, 1) :: nil).
 rewrite app_comm_cons.
 apply dbVar.
 Qed.
+
 
