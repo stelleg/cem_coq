@@ -1,6 +1,9 @@
 Require Import bisim db List NaryFunctions.
 Require cem cbn expr expr_db_nat.
 
+(* Basic idea of proof: we use substitution equivalence relation : substituting
+all terms into the term from the heap, then converting to deBruijn indices *) 
+
 Inductive state_rel : relation cem.configuration cbn.configuration := 
   | init : forall t e,
            deBruijn t e -> 
