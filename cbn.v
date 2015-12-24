@@ -1,7 +1,8 @@
 (* Based on figure 8 of ariola et al *) 
 Require Import Lists.List Decidable CpdtTactics Program.Basics.
 Require Import Unicode.Utf8_core.
-Require Import expr util.
+Require Import expr util db.
+Require expr_db_nat.
 Require Import Arith.Peano_dec.
 
 Definition heap := list (nat * tm). 
@@ -172,4 +173,5 @@ apply App with 0 0 1 nil nil. unfold fresh.  simpl. split; auto. split. unfold
 not. intros. destruct H. inversion H. assumption. auto. apply Abs. simpl. rewrite <-
 app_nil_l with (prod nat tm) (cons (1↦:λ0,0) nil). rewrite <- app_nil_l with
 (prod nat tm) (cons (1↦:λ0,0) nil). apply Id. apply Abs. Qed. 
+
 

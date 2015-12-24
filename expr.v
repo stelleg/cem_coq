@@ -22,6 +22,8 @@ Fixpoint fvs (e:tm) : list nat := match e with
   | app m n => fvs m ++ fvs n
   end.
 
+Definition closed (t:tm) := fvs t = nil.
+
 Fixpoint vars (e:tm) : list nat := match e with
   | var v => v::nil
   | abs v b => v::vars b

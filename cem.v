@@ -1,5 +1,6 @@
 Require Import expr_db_nat.
-Require Import List Unicode.Utf8_core.
+Require Import Arith.EqNat.
+Require Import List Unicode.Utf8.
 
 Definition append := Datatypes.app.
 
@@ -9,7 +10,7 @@ Inductive closure : Type :=
 Inductive cell : Type :=
   | cl : closure -> nat -> cell.
 
-Definition heap := list (prod nat cell).
+Definition heap := list (nat * cell).
 
 Inductive configuration : Type :=
   | st : heap -> closure -> configuration.
@@ -26,16 +27,44 @@ Inductive cactus_lookup : nat -> nat -> heap -> nat -> Prop :=
   | pred : forall x y z Φ M Υ i, cactus_lookup i x Φ z -> 
             cactus_lookup (S i) y (append _ Φ (cons (y ↦ {M, x}) Υ)) z.
 
-Definition domain (h:heap) : list nat := @map (nat * cell) nat (@fst nat cell) h.
-
-Fixpoint elem (n: nat) (d: list nat) : Prop := match d with
-  | nil => False
-  | cons m ms => n = m \/ elem n ms
+Definition lookup {a} (x:nat) (l:list (nat * a)) : option a := 
+  match find (λ p, beq_nat x (fst p)) l with 
+    | None => None
+    | Some (k,v) => Some v
   end.
 
+Fixpoint clu (v env:nat) (h:heap) : option nat := match v with
+  | 0 => Some env
+  | S n => match lookup env h with
+    | Some (cl c a) => clu n a h
+    | None => None
+    end
+  end.
+
+Definition domain (h:heap) : list nat := @map (nat * cell) nat (@fst nat cell) h.
+
 Definition fresh (n : nat) (h : heap) (d : list nat) := 
-  ~ elem n d
-  /\ ~ elem n (domain h).
+  ~ In n d
+  /\ ~ In n (domain h).
+
+Fixpoint forevery {a} (l:list a) (p : a → Prop) : Prop := match l with
+  | cons x xs => p x ∧ forevery xs p
+  | nil => True
+  end.
+
+Definition closed_under (c : configuration) : Prop := match c with
+  | st h (close t e) => forevery (fvs t) 
+      (λ x, ∃e', cactus_lookup x e h e' ∧ In e' (domain h))
+  end.
+
+Definition closed (t : expr) : Prop := closed_under (st nil (close t 0)).
+
+Fixpoint well_formed_heap (h : heap) : Prop := forevery h 
+  (λ x, match x with | (v,cl c e) => closed_under (st h c) end). 
+
+Definition well_formed (c : configuration) : Prop := match c with 
+  | st h t => closed_under c ∧ well_formed_heap h 
+  end.
 
 Reserved Notation " c1 '⇓' d '#' c2 " (at level 50).
 Inductive step : configuration -> list nat -> configuration -> Prop :=

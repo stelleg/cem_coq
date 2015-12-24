@@ -25,6 +25,8 @@ Inductive db : expr.tm -> list (prod nat nat) -> expr_db_nat.expr -> Prop :=
       db n bs n' ->
       db (expr.app m n) bs (expr_db_nat.app m' n').
 
+Axiom dbf : {t | expr.closed t} -> {e | expr_db_nat.closed e}.
+
 (* debruijn relation for closed terms *)
 Definition deBruijn (t:expr.tm) (e:expr_db_nat.expr) : Prop := db t nil e.
 
@@ -33,7 +35,6 @@ Lemma let_inline :forall (b c:prod nat nat),
     auto. Qed.
 
 Definition domain (A B : Type) : list (prod A B) -> list A := map (@fst A B). 
-
 
 Lemma domain_fmap : forall A B C (f:B->C) (xs:list (A * B)),  domain (map
 (fmap f) xs) = domain xs.
@@ -50,15 +51,23 @@ Theorem db_closed : forall t e, db t nil e -> expr.fvs t = nil.
 intros. apply db_closed_under in H. simpl in H. unfold subset in H. destruct
 (expr.fvs t).  reflexivity. inversion H. inversion H0. Qed. 
 
+Axiom closed_db_under : forall f t, subset (expr.fvs t) (domain f) -> 
+  exists e, db t f e.
+
 (*
-Theorem closed_db_under : forall f t e, subset (expr.fvs t) (domain f) -> db t f e.
-intros. induction f. crush. induction db. 
+Theorem closed_db_under : forall f t, subset (expr.fvs t) (domain f) -> exists
+e, db t f e.
+intros. induction t. destruct H. apply in_split in H. crush. clear H0.
+apply ex_intro with (expr_db_nat.var n).
+induction f. crush. induction t. inversion H. inversion H0. unfold expr.fvs
+in H. apply app_subset_and in H. destruct H. crush. apply ex_intro with
+(expr_db_nat.app x0 x). apply dbApp; assumption. apply ex_intro with
+expr_db_nat.lam 
 induction e. crush. apply in_split in H0. destruct H0. destruct H.   
 induction H. crush. unfold domain. rewrite map_app. rewrite in_app_iff.
 right. crush. crush. rewrite <- subset_remove_cons. rewrite domain_fmap in IHdb.
 assumption. simpl. apply app_subset_and. crush. Qed. 
 *)
-
 
 Definition lookup' {A B} : forall (f : list (A * B)) (a: {a | In a (domain f)}), B. 
 intros. induction f. crush. destruct a. inversion f. destruct a0. assumption.
