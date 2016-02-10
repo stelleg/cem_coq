@@ -1,3 +1,4 @@
+Require Import Unicode.Utf8.
 Require Import Decidable.
 Require expr expr_db_nat.
 Require Import List Datatypes util.
@@ -8,9 +9,11 @@ Set Implicit Arguments.
 
 (* db.v : used to relate debruijn terms with standard terms *) 
 
-
 Definition fmap {A B C} (f : B -> C) : A * B -> A * C  := fun x => match x with
   | (a, b) => (a, f b) end. 
+
+Definition fmap' {A B C} (f : A -> C) : A * B -> C * B  := fun x => match x with
+  | (a, b) => (f a, b) end. 
 
 (* a relation between standard lambda terms and deBruijn-indexed term, note that
   standard variables are nats as well *)

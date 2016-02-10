@@ -1,5 +1,5 @@
 COQC := coqc
-sources = util expr expr_db_nat bisim db cem cbn
+sources = CpdtTactics util expr expr_db_nat bisim db cem cbn assembly compiler
 
 all: ${sources}
 

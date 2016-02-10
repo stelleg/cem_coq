@@ -1,6 +1,10 @@
 Require Import List Basics EqNat Logic.Decidable.
 Require Import Arith.Peano_dec.
 Require Import CpdtTactics.
+Require Import Logic.ProofIrrelevance.
+Require Import Unicode.Utf8.
+
+Definition Map a b := list (a * b).
 
 Lemma wrap : forall A B (f:A -> B), f = fun a:A => f a. auto. Qed.  
 
@@ -28,6 +32,17 @@ intros. split;  intros. split; intros. apply or_introl with (B:=y a) in H0.
 apply H in H0. assumption. apply or_intror with (A:=x a) in H0. apply H in H0.
 assumption. destruct H. destruct H0. apply H in H0. assumption. apply H1 in H0.
 assumption. Qed.
+
+Fixpoint forevery {a} (l:list a) (p : a → Prop) : Prop := match l with
+  | cons x xs => p x ∧ forevery xs p
+  | nil => True
+  end.
+
+Lemma forevery_app : forall a (xs ys:list a) p, forevery (xs ++ ys) p <->
+  forevery xs p ∧ forevery ys p.
+  intros. induction xs. simpl. split. auto. intros. destruct H. auto. simpl. 
+  split. intros. destruct H. apply IHxs in H0. destruct H0. split. auto. auto. 
+  intros. rewrite and_assoc in H. destruct H. rewrite <- IHxs in H0. auto. Qed.  
 
 Lemma subset'_cons {A} : forall (x : A) (l m : list A), 
   subset' (x::l) m -> subset' l m.
@@ -73,6 +88,17 @@ reflexivity. Qed.
 
 Lemma eq_nat_dec_refl : forall m, eq_nat_dec m m = left eq_refl.
 intros. induction m. auto. simpl. rewrite IHm. simpl. reflexivity. Qed. 
+
+Lemma eq_dec_refl : forall A (m:A) (eq : ∀ a b:A, {a = b} + {a <> b}) , eq m m = left eq_refl.
+intros. destruct (eq m m). assert (∀ p q : m = m, p = q). apply
+proof_irrelevance. specialize H with e eq_refl. rewrite H. reflexivity. crush.
+Qed.  
+
+Lemma eq_nat_dec_neq : forall m n (p : m <> n), eq_nat_dec m n = right p.
+intros. destruct (eq_nat_dec m n). unfold not in p. subst. assert (n = n).
+reflexivity.  apply p in H. inversion H. assert (p = n0). rewrite
+proof_irrelevance with (P := m <> n) (p1 := p) (p2 := n0). reflexivity. subst.
+reflexivity. Qed.
 
 Lemma remove_dup : forall (n m : nat) ns, remove n (remove m ns) = remove m
 (remove n ns).
@@ -206,4 +232,11 @@ left. reflexivity. repeat (apply subset_cons). apply subset_id. right. left.
 reflexivity. split. left. reflexivity. repeat (apply subset_cons). apply
 subset_id. Qed.
 
+Fixpoint lookup {K V : Type} (E : ∀ n m : K, {n = m} + {n <> m})
+  (k : K) (l : list (K * V)) : option V := match l with
+    | nil => None
+    | cons (k',v) t => if E k k' then Some v else lookup E k t
+    end.
+
+Definition flip {A B C} (f : A → B → C) : B → A → C := fun b a => f a b.
 

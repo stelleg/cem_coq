@@ -16,24 +16,25 @@ Notation " ⟨ Ψ , b ⟩ N " := (st (cons b Ψ) N) (at level 40).
 Notation " ⟨ Φ , b , Ψ ⟩ N " := (st (Datatypes.app Ψ (cons b Φ)) N) (at level 40).
 
 Definition domain (h:heap) : list nat := @map (nat * tm) nat (@fst nat tm) h.
-Definition fresh (n : nat) (e : tm) (h : heap) (d : list nat) := ~ In n d
-  /\ ~ In n (vars e)
-  /\ ~ In n (domain h).
+Definition fresh (n : nat) (e : tm) (h : heap) := 
+  ~ In n (vars e) 
+  ∧ ~ In n (domain h).
+
 
 (* Direct description of Maraist et al. Figure 8, with amendment from  *)
-Reserved Notation " c1 '⇓' d '#' c2 " (at level 50).
-Inductive step : configuration -> list nat -> configuration -> Prop :=
-  | Id : ∀ M N y x Φ d Ψ Υ, ⟨Φ⟩M ⇓ cons x (List.app (domain Υ) d) # ⟨Ψ⟩:λy,N ->
-          ⟨Φ, x ↦ M, Υ⟩var x ⇓ d # ⟨Ψ, x ↦ :λy,N, Υ⟩:λy,N
-  | Abs : ∀ N x Φ d,  ⟨Φ⟩:λx,N ⇓ d # ⟨Φ⟩:λx,N
-  | App : ∀ M N L B y x x' Φ Ψ Υ d d',
-              fresh x' N Φ d ->
-            ⟨Φ⟩L ⇓ d # ⟨Ψ⟩:λx,N ->
-        ⟨Ψ, x' ↦ M⟩[var x'//x]N ⇓ d' # ⟨Υ⟩:λy,B ->
-           ⟨Φ⟩(L@M) ⇓ d # ⟨Υ⟩:λy,B
-where " c1 '⇓' d '#' c2 " := (step c1 d c2).
+Reserved Notation " c1 '⇓' c2 " (at level 50).
+Inductive step : configuration -> configuration -> Prop :=
+  | Id : ∀ M N y x Φ Ψ Υ, ⟨Φ, x ↦ M, Υ⟩M ⇓ ⟨Ψ, x ↦ M, Υ⟩:λy,N →
+            ⟨Φ, x ↦ M, Υ⟩var x ⇓ ⟨Ψ, x ↦ :λy,N, Υ⟩:λy,N
+  | Abs : ∀ N x Φ,  ⟨Φ⟩:λx,N ⇓ ⟨Φ⟩:λx,N
+  | App : ∀ M N L B y x x' Φ Ψ Υ,
+              fresh x' N Φ → 
+            ⟨Φ⟩L ⇓ ⟨Ψ⟩:λx,N → 
+        ⟨Ψ, x' ↦ M⟩[var x'//x]N ⇓ ⟨Υ⟩:λy,B →
+           ⟨Φ⟩(L@M) ⇓ ⟨Υ⟩:λy,B
+where " c1 '⇓' c2 " := (step c1 c2).
 
-Lemma values_only : ∀ c M Ψ d, c ⇓ d # ⟨Ψ⟩M -> value M.
+Lemma values_only : ∀ c M Ψ, c ⇓ ⟨Ψ⟩M → value M.
 intros. inversion H; simpl; auto. Qed. 
 
 Definition closed_under (c : configuration) : Prop := match c with
@@ -41,16 +42,15 @@ Definition closed_under (c : configuration) : Prop := match c with
 
 Definition closed (t : tm) : Prop := closed_under (st nil t).
 
-Fixpoint well_formed_heap (h : heap) : Prop := match h with
-  | cons (x, M) t => closed_under (st t M)  /\ well_formed_heap t 
-  | nil => True
-  end.
+Definition well_formed_heap (h : heap) : Prop := fold_left and (map (λ p, match p with
+  | (x, M) => closed_under (st h M)
+  end) h) True.
 
 Definition well_formed (c : configuration) : Prop := match c with 
-  | st h t => closed_under c /\ well_formed_heap h 
+  | st h t => closed_under c ∧ well_formed_heap h 
   end.
 
-Fixpoint collapse (h : heap) : tm -> tm :=  match h with
+Fixpoint collapse (h : heap) : tm → tm :=  match h with
   | nil => id 
   | cons (x, e') t => compose (subst x (collapse t e')) (collapse t)
   end.
@@ -58,15 +58,23 @@ Fixpoint collapse (h : heap) : tm -> tm :=  match h with
 Example collapse_simple : collapse (0↦:λ0, 0  :: nil) 0 = :λ0, 0.
 eauto. Qed. 
 
+(*
+Lemma fold_left_and : ∀ l a, fold_left and l a ↔ a ∧ fold_left and l True.
+intros. induction l; split; intros. crush. crush. split. simpl in H. split. auto. simpl. auto. crush. 
+
+
 Lemma well_formed_app : ∀ (Φ Ψ:heap) (x:nat) (M N:tm), 
-  well_formed (⟨Φ, x ↦ M, Ψ⟩N) ->
-  well_formed (⟨Φ⟩ M).
-intros. 
-destruct H.  
-clear H.
-induction Ψ.
-destruct H0. split; assumption. simpl in H0. apply IHΨ.
-destruct a. destruct H0. assumption.  Qed.
+  well_formed (⟨Φ, x ↦ M, Ψ⟩N) →
+  well_formed (⟨Φ, x ↦ M, Ψ⟩M).
+intros. destruct H. clear H. split. induction Ψ. simpl in H0. simpl. 
+unfold well_formed_heap in H0. simpl in H0. unfold fold_left in H0. rewrite fold_left  
+well_formed_heap in H0. unfold fold_left in H0. simpl in H0. unfold well_formed_heap in H0. rewrite map_app in
+H0. simpl in H0. rewrite fold_left_app in H0. simpl in H0. unfold fold_left in
+H0.  simpl in H0.  induction Ψ. simpl. apply
+subset_cons. simpl in H0.
+assumption. simpl. split; assumption.  destruct a. simpl in H0. destruct H0.
+apply IHΨ in H0. simpl. split. destruct H0. apply subset_cons. assumption.
+split. assumption. destruct H0. assumption.  Qed.
 
 Definition stheap (c:configuration) : heap := match c with | st h t => h end.
 Definition sttm (c:configuration) : tm := match c with | st h t => t end.
@@ -98,37 +106,30 @@ unfold not. intros. unfold not in H. assert (n <> n0). unfold not. intros.
 symmetry in H2.  apply H in H2. assumption. apply remove_not_in with (ns:=fvs e)
 in H2. apply H2 in H1. apply H0 in H1. assumption. Qed.  
 
-Lemma fresh_subst : forall x x' e h d, fresh x' e h d -> fvs ([x'//x]e) = replace x x' (fvs e).
-intros. destruct H. destruct H0. induction e. simpl in H0. apply not_or in H0.
-destruct H0. simpl. unfold replace'. destruct (eq_nat_dec x n); simpl; auto. simpl. unfold
-replace. rewrite map_app. simpl in H0. rewrite in_app_iff in H0. apply
-not_or in H0. destruct H0. apply IHe1 in H0. apply IHe2 in H2. rewrite H0.
-rewrite H2. reflexivity. simpl. destruct (eq_nat_dec x n). simpl. subst. rewrite
-replace_remove. auto.  simpl. simpl in H0. apply not_or in H0. destruct H0.
-assert (not (In x' (fvs e))). apply not_vars_fvs in H2. assumption.
-apply IHe in H2. rewrite H2. induction (fvs e). auto. simpl. simpl in H2. unfold
-replace' in H2. unfold replace'. 
-destruct (eq_nat_dec x a). destruct (eq_nat_dec n x'). apply H0 in e1. inversion
-e1. destruct (eq_nat_dec n a). subst. rewrite replace_remove. assert (a = a).
-reflexivity. apply n0 in H4. inversion H4. subst. simpl. unfold replace'. rewrite
-eq_nat_dec_refl. simpl in H3. apply not_or in H3. destruct H3. apply
-remove_replace_comp with (y:=a) (z:=n) in H4 . rewrite H4. reflexivity.
-assumption. assumption. unfold not. intros. simpl in H3. apply not_or in H3. destruct H3. destruct (eq_nat_dec n
-a). subst. apply remove_replace_comp. assumption. assumption. unfold not.
-intros. symmetry in H5. apply n0 in H5. assumption. simpl. unfold replace'. destruct (eq_nat_dec
-x a). apply n1 in e0. inversion e0. apply remove_replace_comp with (y:=x)
-(z:=n) in H4. rewrite H4. reflexivity. assumption. auto. Qed. 
+Lemma fresh_subst : forall x x' e h, fresh x' e h -> fvs ([x'//x]e) = replace x x' (fvs e).
+(* Var *)
+intros. destruct H. clear H0. induction e. destruct (eq_nat_dec x n). subst.
+simpl. unfold replace'. rewrite eq_nat_dec_refl. reflexivity. simpl. unfold
+replace'. rewrite eq_nat_dec_neq with (p := n0). reflexivity.
+(* App *)
+simpl in H. simpl. rewrite in_app_iff in H. apply not_or in H. destruct H. 
+apply IHe1 in H. apply IHe2 in H0. rewrite H. rewrite H0. unfold replace.
+rewrite map_app. reflexivity.
+(* Lam *)
+simpl in H. apply not_or in H. destruct H. assert (~ In x' (fvs e)). apply
+not_vars_fvs. assumption. apply IHe in H0. simpl. destruct
+(eq_nat_dec x n). simpl. subst. rewrite replace_remove. reflexivity. 
+simpl. rewrite H0. rewrite remove_replace_comp. reflexivity. assumption.
+assumption. unfold not. intros. rewrite H2 in n0. assert (x = x). reflexivity.
+apply n0 in H3. assumption. Qed.
 
-Lemma monotonic_heap : forall c1 c2 d, c1 ⇓ d # c2 -> 
+Lemma monotonic_heap : forall c1 c2, c1 ⇓ c2 -> 
 subset (domain (stheap c1)) (domain (stheap c2)).  
-intros. 
-induction H. 
-simpl.  simpl in IHstep. unfold domain. rewrite map_app. rewrite map_app. unfold
-domain in IHstep. simpl. apply subset_comm1. simpl. split. apply
-in_or_app. right. simpl. auto. 
-apply subset_comm1. simpl. apply subset_app_id. apply subset_cons. assumption.
-apply subset_id. simpl. simpl in IHstep1. simpl in IHstep2. destruct IHstep2.
-apply subset_trans with (ys:=domain Ψ); assumption. Qed.
+intros c1 c2 step.  induction step. simpl. simpl in IHstep. 
+unfold domain at 2. unfold domain at 2 in IHstep. rewrite map_app. rewrite
+map_app in IHstep.  simpl. simpl in IHstep. assumption. 
+apply subset_id. simpl. simpl in IHstep1. simpl in IHstep2. destruct IHstep2. 
+apply subset_trans with (ys:=domain Ψ). assumption. assumption. Qed.
 
 Lemma well_formed_var : forall Φ Ψ Υ x n v, well_formed (⟨Ψ, x↦n, Υ⟩x) -> subset
   (domain Ψ) (domain Φ) -> well_formed (⟨Φ⟩v) -> well_formed (⟨Φ, x↦v, Υ⟩v).
@@ -150,9 +151,12 @@ assert (well_formed (⟨Ψ, x ↦n, Υ ⟩ x)). split. unfold closed_under. unfo
 domain.  rewrite map_app. apply subset_comm2. simpl. auto. assumption. apply
 IHΥ.  assumption. destruct H4. assumption. assumption. Qed.
 
-Theorem well_formed_step : ∀ c1 c2 d, well_formed c1 -> c1 ⇓ d # c2 -> well_formed c2.
-intros. induction H0. assert (well_formed (⟨Φ, x ↦ M, Υ⟩x)). assumption. split. 
-apply well_formed_app in H. apply IHstep in H. unfold closed_under. 
+Theorem well_formed_step : ∀ c1 c2, well_formed c1 -> c1 ⇓ c2 -> well_formed c2.
+intros. induction H0. assert (well_formed (⟨Φ, x ↦ M, Υ⟩ M)). apply
+well_formed_app in H. assumption. apply IHstep in H1. apply well_formed_app in
+H1. 
+destruct H. assumption. apply assumption. split. 
+apply well_formed_app in H. apply IHstep in H1. unfold closed_under. 
 unfold domain. rewrite map_app. apply subset_comm2. apply
 subset_app. apply subset_cons.  destruct H. assumption. 
 apply monotonic_heap in H0. simpl in H0. apply well_formed_var with (Ψ:=Φ)
@@ -173,5 +177,7 @@ apply App with 0 0 1 nil nil. unfold fresh.  simpl. split; auto. split. unfold
 not. intros. destruct H. inversion H. assumption. auto. apply Abs. simpl. rewrite <-
 app_nil_l with (prod nat tm) (cons (1↦:λ0,0) nil). rewrite <- app_nil_l with
 (prod nat tm) (cons (1↦:λ0,0) nil). apply Id. apply Abs. Qed. 
+
+*)
 
 

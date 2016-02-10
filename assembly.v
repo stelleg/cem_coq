@@ -1,49 +1,35 @@
-Inductive HeapPtr := | h_ptr : nat -> HeapPtr.
-Inductive StackPtr := | s_ptr : nat -> StackPtr.
-Inductive InstrPtr := | i_ptr : nat -> InstrPtr.
+Require Import util.
+Require Import Unicode.Utf8.
 
-Inductive Ptr := 
-  | ph : HeapPtr -> Ptr
-  | ps : StackPtr -> Ptr
-  | pl : InstrPtr -> Ptr.
-
-Inductive Word : Type := 
-  | wptr : Ptr -> Word
-  | wnat : nat -> Word.
+Definition Word := nat.
+Definition Ptr := nat.
+Definition Stack := list Word.
 
 Inductive Reg := 
   | IP
-  | SP
-  | EP 
-  | FR
-  | R1.
-
-Inductive L : Type :=
-  | lreg : Reg -> L
-  | lhptr : HeapPtr -> L
-  | lsptr : StackPtr -> L.
-
-Inductive R : Type :=
-  | rreg : Reg -> R
-  | rloc : Reg -> R
-  | rword : Word -> R.
+  | EP
+  | R1
+  | R2
+  | R3.
 
 Inductive Op : Type :=
-  | add : R -> R -> Op.
+  | word : Word → Op
+  | new : Op
+  | read : Ptr → Op
+  | write : Ptr → Reg → Op
+  | sub : Reg → Reg → Op
+  | add : Reg → Reg → Op.
 
 Inductive Instr : Type :=
-  | iset : L -> R -> Instr
-  | iop : L -> Op -> Instr.
+  | op : Reg -> Op -> Instr -> Instr
+  | jump : Ptr -> Instr
+  | halt : Instr.
 
-Inductive Jump : Type :=
-  | goto : InstrPtr -> Jump
-  | jzero : R -> InstrPtr -> InstrPtr -> Jump.
-
-Definition Heap := HeapPtr -> Word.
-Definition Stack := StackPtr -> Word.
-Definition Program := InstrPtr -> Instr. 
-Definition Registers := Reg -> Word.
+Definition Heap := Map Ptr Word.
+Definition Program := Map Ptr Instr.
+Definition RegisterFile := Reg → Word.
 
 Inductive State := 
-  | st : Registers -> Program -> Stack -> Heap -> State.
+  | st : RegisterFile → Program → Stack → Heap → State.
+
 
