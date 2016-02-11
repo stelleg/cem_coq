@@ -1,10 +1,31 @@
-COQC := coqc
-sources = CpdtTactics util expr expr_db_nat bisim db cem cbn assembly compiler
+files = CpdtTactics \
+				util \
+				expr \
+				expr_db_nat \
+				bisim \
+				db \
+				cem \
+				cbn \
+				assembly \
+				cesm \
+				compiler 
+
+sources = ${files:=.v}
+objects = ${files:=.vo}
+deps = ${files:=.d}
 
 all: ${sources}
+	$(MAKE) ${deps}
+	$(MAKE) ${objects}
 
-%: %.v
-	${COQC} $<
+%.vo: %.v
+	coqc $<
+
+%.d: %.v
+	coqdep -I . $< > $@
+
+-include ${deps}
 
 clean:
-	rm -f *.glob *.vo
+	rm -f *.glob *.vo *.d
+

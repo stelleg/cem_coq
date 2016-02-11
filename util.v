@@ -13,6 +13,14 @@ Fixpoint subset {A} (l : list A) (m: list A) : Prop := match l with
   | cons x xs => In x m /\ subset xs m
   end.
 
+Definition rel (A : Type) := A → A → Prop.
+Definition relation (A B : Type) := A → B → Prop.
+Definition equiv {A B} := ∀ (a a':A) (b b':B) (ra : rel A) (rb : rel B)
+  (e : relation A B), e a b → ra a a' → rb b b' → e a' b'.
+Inductive refl_trans_closure {X : Type} (R : rel X) : rel X :=
+  | rtc_refl : ∀(x : X), refl_trans_closure R x x
+  | rtc_step : ∀(x y z : X), R x y → refl_trans_closure R y z → refl_trans_closure R x z.
+
 Lemma or_imp : forall a b c : Prop, (a \/ b -> c) <-> (a -> c) /\ (b -> c).
 intros. split; intros. split; intros.  apply or_introl with (B:=b) in H0. apply H in H0.
 assumption. apply or_intror with (A:=a) in H0. apply H in H0. assumption.
@@ -37,6 +45,15 @@ Fixpoint forevery {a} (l:list a) (p : a → Prop) : Prop := match l with
   | cons x xs => p x ∧ forevery xs p
   | nil => True
   end.
+
+Definition domain {a b} (m : Map a b) : list a := map (@fst a b) m.
+
+Definition fmap {A B C} (f : B -> C) : A * B -> A * C  := fun x => match x with
+  | (a, b) => (a, f b) end. 
+
+Lemma domain_fmap : forall A B C (f:B->C) (xs:Map A B),  domain (map
+(fmap f) xs) = domain xs.
+intros. induction xs. crush. crush. Qed. 
 
 Lemma forevery_app : forall a (xs ys:list a) p, forevery (xs ++ ys) p <->
   forevery xs p ∧ forevery ys p.
@@ -96,6 +113,12 @@ Qed.
 
 Lemma eq_nat_dec_neq : forall m n (p : m <> n), eq_nat_dec m n = right p.
 intros. destruct (eq_nat_dec m n). unfold not in p. subst. assert (n = n).
+reflexivity.  apply p in H. inversion H. assert (p = n0). rewrite
+proof_irrelevance with (P := m <> n) (p1 := p) (p2 := n0). reflexivity. subst.
+reflexivity. Qed.
+
+Lemma eq_dec_neq : forall A (m n:A) (eq : ∀ a b:A, {a = b} + {a <> b}) (p : m <> n), eq m n = right p.
+intros. destruct (eq m n). unfold not in p. subst. assert (n = n).
 reflexivity.  apply p in H. inversion H. assert (p = n0). rewrite
 proof_irrelevance with (P := m <> n) (p1 := p) (p2 := n0). reflexivity. subst.
 reflexivity. Qed.
@@ -233,10 +256,26 @@ reflexivity. split. left. reflexivity. repeat (apply subset_cons). apply
 subset_id. Qed.
 
 Fixpoint lookup {K V : Type} (E : ∀ n m : K, {n = m} + {n <> m})
-  (k : K) (l : list (K * V)) : option V := match l with
+  (k : K) (l : Map K V) : option V := match l with
     | nil => None
     | cons (k',v) t => if E k k' then Some v else lookup E k t
     end.
 
+Definition lookup_total {A B} : forall (m : Map A B), {a | In a (domain m)} → B. 
+intros. induction m. crush. destruct X. inversion f. destruct a. assumption. Qed.
+
 Definition flip {A B C} (f : A → B → C) : B → A → C := fun b a => f a b.
+
+Lemma in_domain_lookup {a b} : forall (m : Map a b) eq k, In k (domain m) →
+  exists v, lookup eq k m = Some v.
+  intros. induction m. crush. destruct a0. simpl in H. destruct (eq k a0).
+  subst. simpl. rewrite eq_dec_refl. apply ex_intro with b0. reflexivity.
+  simpl. destruct H. symmetry in H. apply n in H. inversion H. apply IHm in H. destruct H.
+  rewrite H. apply ex_intro with x. rewrite eq_dec_neq with (n:=a0) (m:=k)
+  (p:=n). reflexivity. Qed.
+
+Lemma subset_domain_map {a b} : forall l (m : Map a b) eq, subset l (domain m) → forevery l (λ k,
+  exists v, lookup eq k m = Some v).
+intros. induction l. crush. simpl in H. destruct H. apply IHl in H0. simpl.
+split. Focus 2. assumption. apply in_domain_lookup. assumption. Qed. 
 

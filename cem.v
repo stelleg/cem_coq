@@ -11,10 +11,12 @@ Inductive closure : Type :=
 Inductive cell : Type :=
   | cl : closure → nat → cell.
 
-Definition heap := list (nat * cell).
+Definition heap := Map nat cell.
 
 Inductive configuration : Type :=
   | st : heap → closure → configuration.
+
+Definition I (e : expr) : configuration := st nil (close e 0).
 
 Notation " x ↦ M " := (x, M) (at level 40).
 Notation " ⟨ Φ ⟩ m " := (st Φ m) (at level 40).
@@ -41,8 +43,6 @@ Fixpoint clu (v env:nat) (h:heap) : option nat := match v with
     | None => None
     end
   end.
-
-Definition domain (h:heap) : list nat := @map (nat * cell) nat (@fst nat cell) h.
 
 Definition fresh (n : nat) (h : heap) := 
   ~ In n (domain h).

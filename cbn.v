@@ -15,11 +15,11 @@ Notation " ⟨ Φ ⟩ m " := (st Φ m) (at level 40).
 Notation " ⟨ Ψ , b ⟩ N " := (st (cons b Ψ) N) (at level 40).
 Notation " ⟨ Φ , b , Ψ ⟩ N " := (st (Datatypes.app Ψ (cons b Φ)) N) (at level 40).
 
-Definition domain (h:heap) : list nat := @map (nat * tm) nat (@fst nat tm) h.
 Definition fresh (n : nat) (e : tm) (h : heap) := 
   ~ In n (vars e) 
   ∧ ~ In n (domain h).
 
+Definition I (e : tm ) : configuration := st nil e.
 
 (* Direct description of Maraist et al. Figure 8, with amendment from  *)
 Reserved Notation " c1 '⇓' c2 " (at level 50).
