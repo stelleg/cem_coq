@@ -4,13 +4,14 @@ Require Import Arith.Peano_dec.
 Require Import List Datatypes.
 Require Import Unicode.Utf8.
 
-(* Function instead of logical relation, not equivalent! Function takes first
-value in environment, logical relation takes any. Logical relation wrong? *)
+(* This file has the high level structure of the compiler and the corresponding
+main theorems of correctness *)
 
-(*
-Axiom refl_trans_iso : ∀ e e' m, expr.closed e → cbn.step (cbn.i e) e' → 
-                assembly.step (assembly.i (compile e)) m ∧ m ≃ e'.
+Definition compile (t : expr.tm) : option Program := match db t nil with
+  | Some a => Some (assemble a)
+  | None => None 
+  end.
+
+(* Definition compile (t: expr.tm) : expr.closed t → { mc | trans_clos prog p }.
 *)
 
-(* TODO: Assembler from db terms.
-Fixpoint assemble (e : expr_db_nat.expr) : program. *)

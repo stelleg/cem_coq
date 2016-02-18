@@ -8,7 +8,6 @@ Require Import Program.Basics.
 Set Implicit Arguments.
 
 (* db.v : used to relate debruijn terms with standard terms *) 
-
 Definition fmap' {A B C} (f : A -> C) : A * B -> C * B  := fun x => match x with
   | (a, b) => (f a, b) end. 
 

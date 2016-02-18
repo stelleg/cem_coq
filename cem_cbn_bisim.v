@@ -1,16 +1,23 @@
 Require Import Unicode.Utf8.
 Require Import bisim db List NaryFunctions.
-Require cem cbn expr expr_db_nat.
+Require cem cbn expr expr_db_nat util relations.
 Require Import CpdtTactics.
 
+(* TODO : Proper relation *)
+Inductive cem_cbn_rel : relation cem.configuration cbn.configuration :=
+  | cc_rel : ∀ c1 c2, cem_cbn_rel c1 c2. 
+
+Lemma cem_cbn_bisim : strong_bisim cem.configuration cbn.configuration
+                                   cem.step          cbn.step
+                                   cem_cbn_rel.
+Admitted. 
+
 (*Well formed configurations can be collapsed into a closed deBruijn term*)
-Theorem well_formed_cbn_closed_db : ∀ c, cbn.well_formed c -> {e | expr_db_nat.closed e}.
+Theorem well_formed_cbn_closed_db : ∃ c, cbn.well_formed c ↔ ∃ e, expr_db_nat.closed e.
 intros. destruct c. induction (expr.fvs t). destruct H. 
 induction h. destruct H. crush. assert (expr.closed t).
 unfold expr.closed. apply util.subset_nil2. assumption. apply dbf. split with
 (x:=t). assumption. destruct a. crush. 
-
-apply dbf.
 
 (* Relation idea: replace deBruijn variable with lookup location, which makes
 them equal *)

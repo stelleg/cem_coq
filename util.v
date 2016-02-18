@@ -17,9 +17,6 @@ Definition rel (A : Type) := A → A → Prop.
 Definition relation (A B : Type) := A → B → Prop.
 Definition equiv {A B} := ∀ (a a':A) (b b':B) (ra : rel A) (rb : rel B)
   (e : relation A B), e a b → ra a a' → rb b b' → e a' b'.
-Inductive refl_trans_closure {X : Type} (R : rel X) : rel X :=
-  | rtc_refl : ∀(x : X), refl_trans_closure R x x
-  | rtc_step : ∀(x y z : X), R x y → refl_trans_closure R y z → refl_trans_closure R x z.
 
 Lemma or_imp : forall a b c : Prop, (a \/ b -> c) <-> (a -> c) /\ (b -> c).
 intros. split; intros. split; intros.  apply or_introl with (B:=b) in H0. apply H in H0.
@@ -51,9 +48,18 @@ Definition domain {a b} (m : Map a b) : list a := map (@fst a b) m.
 Definition fmap {A B C} (f : B -> C) : A * B -> A * C  := fun x => match x with
   | (a, b) => (a, f b) end. 
 
+Definition forevery_codomain {a b} (m:Map a b) (p : b → Prop) : Prop := forevery
+  m (λ x, match x with (k,v) => p v end).
+
+
 Lemma domain_fmap : forall A B C (f:B->C) (xs:Map A B),  domain (map
 (fmap f) xs) = domain xs.
 intros. induction xs. crush. crush. Qed. 
+
+Lemma domain_inf {a b} : ∀ xs (y:a) (m m':b) ys, domain (xs ++ (y,m) :: ys) = 
+                                   domain (xs ++ (y,m') :: ys).
+intros. unfold domain. rewrite map_app. simpl. rewrite map_app. simpl.
+reflexivity. Qed.                                    
 
 Lemma forevery_app : forall a (xs ys:list a) p, forevery (xs ++ ys) p <->
   forevery xs p ∧ forevery ys p.
@@ -261,8 +267,13 @@ Fixpoint lookup {K V : Type} (E : ∀ n m : K, {n = m} + {n <> m})
     | cons (k',v) t => if E k k' then Some v else lookup E k t
     end.
 
-Definition lookup_total {A B} : forall (m : Map A B), {a | In a (domain m)} → B. 
-intros. induction m. crush. destruct X. inversion f. destruct a. assumption. Qed.
+Definition lookup_total {A B eq} : forall (m : Map A B) a, In a (domain m) → ∃ b,
+  lookup eq a m = b. 
+intros. induction m. crush. simpl in H. destruct a0. destruct (eq a a0). destruct H. simpl in H.
+simpl. symmetry in e. subst. rewrite eq_dec_refl. apply ex_intro with (Some b). reflexivity.
+apply IHm in H. simpl. subst. rewrite eq_dec_refl. apply ex_intro with (Some b).
+reflexivity. destruct H. simpl in H. symmetry in H. apply n in H. inversion H. simpl. rewrite
+eq_dec_neq with (p:=n). apply IHm in H. assumption. Qed. 
 
 Definition flip {A B C} (f : A → B → C) : B → A → C := fun b a => f a b.
 
@@ -279,3 +290,18 @@ Lemma subset_domain_map {a b} : forall l (m : Map a b) eq, subset l (domain m) �
 intros. induction l. crush. simpl in H. destruct H. apply IHl in H0. simpl.
 split. Focus 2. assumption. apply in_domain_lookup. assumption. Qed. 
 
+Lemma forevery_map {a b} : ∀ (m : Map a b) p eq l v, forevery_codomain m p →
+  lookup eq l m = Some v → p v.
+intros. induction m. crush. destruct a0. destruct (eq l a0). subst. simpl in H0.
+rewrite eq_dec_refl in H0. inversion H0. subst. unfold forevery_codomain in H. 
+simpl in H. crush. simpl in H0. rewrite eq_dec_neq with (p:=n) in H0. unfold
+forevery_codomain in H. simpl in H. destruct H. apply IHm in H1. assumption.
+assumption. Qed. 
+
+Lemma forevery_inf {a} : ∀ (xs ys:list a) (y:a) p, forevery (xs ++ y :: ys) p →
+  p y.
+intros. apply forevery_app in H. crush. Qed. 
+
+Lemma forevery_impl {a} : ∀ xs (p p':a→Prop), (∀ a, p a → p' a) → forevery xs p →
+  forevery xs p'. 
+intros. induction xs. crush. crush. Qed. 

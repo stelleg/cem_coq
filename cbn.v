@@ -42,60 +42,31 @@ Definition closed_under (c : configuration) : Prop := match c with
 
 Definition closed (t : tm) : Prop := closed_under (st nil t).
 
-Definition well_formed_heap (h : heap) : Prop := fold_left and (map (λ p, match p with
+Definition well_formed_heap (h : heap) : Prop := forevery h (λ p, match p with
   | (x, M) => closed_under (st h M)
-  end) h) True.
+  end).
 
 Definition well_formed (c : configuration) : Prop := match c with 
   | st h t => closed_under c ∧ well_formed_heap h 
   end.
 
-Fixpoint collapse (h : heap) : tm → tm :=  match h with
-  | nil => id 
-  | cons (x, e') t => compose (subst x (collapse t e')) (collapse t)
-  end.
-
-Example collapse_simple : collapse (0↦:λ0, 0  :: nil) 0 = :λ0, 0.
-eauto. Qed. 
-
-(*
-Lemma fold_left_and : ∀ l a, fold_left and l a ↔ a ∧ fold_left and l True.
-intros. induction l; split; intros. crush. crush. split. simpl in H. split. auto. simpl. auto. crush. 
-
-
 Lemma well_formed_app : ∀ (Φ Ψ:heap) (x:nat) (M N:tm), 
   well_formed (⟨Φ, x ↦ M, Ψ⟩N) →
   well_formed (⟨Φ, x ↦ M, Ψ⟩M).
-intros. destruct H. clear H. split. induction Ψ. simpl in H0. simpl. 
-unfold well_formed_heap in H0. simpl in H0. unfold fold_left in H0. rewrite fold_left  
-well_formed_heap in H0. unfold fold_left in H0. simpl in H0. unfold well_formed_heap in H0. rewrite map_app in
-H0. simpl in H0. rewrite fold_left_app in H0. simpl in H0. unfold fold_left in
-H0.  simpl in H0.  induction Ψ. simpl. apply
-subset_cons. simpl in H0.
-assumption. simpl. split; assumption.  destruct a. simpl in H0. destruct H0.
-apply IHΨ in H0. simpl. split. destruct H0. apply subset_cons. assumption.
-split. assumption. destruct H0. assumption.  Qed.
+intros. destruct H. clear H. split. unfold well_formed_heap in H0. apply
+forevery_inf in H0. assumption. auto. Qed. 
+
+Lemma well_formed_app' : ∀ (Φ Ψ:heap) (x:nat) (M N:tm), 
+  well_formed (⟨Φ, x ↦ M, Ψ⟩N) →
+  well_formed (⟨Φ, x ↦ N, Ψ⟩N).
+intros. simpl in H. destruct H. split. unfold closed_under. rewrite domain_inf
+with (m:=N) (m':=M). assumption. unfold well_formed_heap. unfold closed_under.
+unfold well_formed_heap in H0. unfold closed_under in H0. rewrite domain_inf
+with (m:=N) (m':=M). rewrite forevery_app. rewrite forevery_app in H0. destruct
+H0. split. crush. crush. Qed.
 
 Definition stheap (c:configuration) : heap := match c with | st h t => h end.
 Definition sttm (c:configuration) : tm := match c with | st h t => t end.
-
-Lemma well_formed_collapse : forall h, well_formed_heap h -> 
-  ∀ n t, In n (fvs (collapse h t)) -> In n (fvs t) /\ ~In n (domain h).
-intros h wf. induction h. crush. destruct a. intros. simpl in wf. destruct wf.
-simpl in H. unfold compose in H.  assert (subset (fvs ([collapse h t //
-n]collapse h t0)) (fvs (collapse h t) ++ remove n (fvs (collapse h t0)))). apply
-subst_subset. rewrite <- subset_eq in H2. apply H2 in H. clear H2. rewrite in_app_iff in
-H. destruct H.  rewrite <- subset_eq in H0. apply IHh in H. crush. assumption. 
-destruct (eq_nat_dec n0 n). subst. apply remove_in in H. inversion H. apply
-remove_not_in in H. apply IHh in H. crush. assumption. assumption. Qed.
-
-Lemma well_formed_collapse_closed : forall h t, well_formed_heap h ->
-closed_under (st h t) -> closed (collapse h t).
-intros. assert (∀ n t, In n (fvs (collapse h t)) -> In n (fvs t) /\ ~In n
-(domain h)). apply well_formed_collapse. assumption. unfold closed. unfold
-closed_under. simpl. rewrite <- subset_eq. unfold subset'. intros. apply H1 in
-H2. simpl. destruct H2. unfold closed_under in H0. rewrite <- subset_eq in H0.
-apply H0 in H2. apply H3 in H2. assumption. Qed. 
 
 Lemma not_vars_fvs : forall n e, ~(In n (vars e)) -> ~(In n (fvs e)).
 induction e. simpl. intros. assumption. simpl. rewrite in_app_iff. rewrite
@@ -131,8 +102,9 @@ map_app in IHstep.  simpl. simpl in IHstep. assumption.
 apply subset_id. simpl. simpl in IHstep1. simpl in IHstep2. destruct IHstep2. 
 apply subset_trans with (ys:=domain Ψ). assumption. assumption. Qed.
 
+(*
 Lemma well_formed_var : forall Φ Ψ Υ x n v, well_formed (⟨Ψ, x↦n, Υ⟩x) -> subset
-  (domain Ψ) (domain Φ) -> well_formed (⟨Φ⟩v) -> well_formed (⟨Φ, x↦v, Υ⟩v).
+  (domain Ψ) (domain Φ) → well_formed (⟨Φ, x↦v, Υ⟩v).
 intros. split. simpl. unfold domain. rewrite map_app. apply subset_comm2. apply
 subset_app.  apply subset_cons. destruct H1. unfold closed_under in H1.
 assumption. inversion H as [H' H2].  induction Υ. simpl. destruct H1. unfold
@@ -150,34 +122,57 @@ closed_under in H. apply subset_app with (zs:=domain (Υ ++ x↦n :: nil)) in H.
 assert (well_formed (⟨Ψ, x ↦n, Υ ⟩ x)). split. unfold closed_under. unfold
 domain.  rewrite map_app. apply subset_comm2. simpl. auto. assumption. apply
 IHΥ.  assumption. destruct H4. assumption. assumption. Qed.
-
-Theorem well_formed_step : ∀ c1 c2, well_formed c1 -> c1 ⇓ c2 -> well_formed c2.
-intros. induction H0. assert (well_formed (⟨Φ, x ↦ M, Υ⟩ M)). apply
-well_formed_app in H. assumption. apply IHstep in H1. apply well_formed_app in
-H1. 
-destruct H. assumption. apply assumption. split. 
-apply well_formed_app in H. apply IHstep in H1. unfold closed_under. 
-unfold domain. rewrite map_app. apply subset_comm2. apply
-subset_app. apply subset_cons.  destruct H. assumption. 
-apply monotonic_heap in H0. simpl in H0. apply well_formed_var with (Ψ:=Φ)
-(Φ:=Ψ) (x:=x) (v:=:λy,N) in H. inversion H. assumption. assumption. apply
-well_formed_app in H. apply IHstep in H. assumption. assumption. 
-destruct H. unfold closed_under in H. simpl in H. apply app_subset_and in H. destruct H.
-assert (well_formed (⟨Φ ⟩ L)). split; assumption. assert (well_formed (⟨Φ ⟩ M)).
-split; assumption. apply IHstep1 in H3.  assert (well_formed (⟨Ψ, x' ↦ M ⟩ [x'
-// x]N)). split. unfold closed_under. simpl. apply fresh_subst with (x:=x) in
-H0. rewrite H0. apply replace_cons. destruct H3. simpl in H3. apply subset_remove_cons
-in H3. assumption.  apply monotonic_heap in H0_. simpl in H0_. split. unfold
-closed_under. destruct H4. unfold closed_under in H4. apply subset_trans with
-(ys:=domain Φ); assumption. destruct H3. assumption. apply IHstep2 in H5.
-assumption. Qed.
-
-Example simple : (step (⟨nil⟩ ((:λ0,0) @ (:λ0,0))) nil (⟨nil, 1 ↦ :λ0,0⟩ :λ0,0)).
-apply App with 0 0 1 nil nil. unfold fresh.  simpl. split; auto. split. unfold
-not. intros. destruct H. inversion H. assumption. auto. apply Abs. simpl. rewrite <-
-app_nil_l with (prod nat tm) (cons (1↦:λ0,0) nil). rewrite <- app_nil_l with
-(prod nat tm) (cons (1↦:λ0,0) nil). apply Id. apply Abs. Qed. 
-
 *)
 
+Theorem well_formed_step : ∀ c1 c2, well_formed c1 → c1 ⇓ c2 → well_formed c2.
+intros. induction H0. apply well_formed_app in H. apply IHstep in H. apply
+well_formed_app' in H. assumption. assumption. apply IHstep2. 
+simpl in H. destruct H. rewrite app_subset_and in H. destruct H. assert
+(well_formed (⟨Φ ⟩ L)). split; assumption. apply IHstep1 in H3. clear IHstep2. 
+split. Focus 2. unfold well_formed_heap. simpl. split. assert (subset (domain Φ)
+(domain Ψ)). apply monotonic_heap in H0_. assumption. apply subset_trans with
+(ys := (domain Φ)) (zs:= (domain Ψ)) in H2. apply subset_cons. assumption.
+assumption. unfold well_formed in H3. destruct H3. unfold well_formed_heap in
+H4. unfold closed_under in H4. apply forevery_impl with (p:=(λ p:nat*tm, let
+(_,M0) := p in subset (fvs M0) (domain Ψ))). intros. destruct a. apply
+subset_cons. assumption. assumption. simpl. simpl in H3. destruct H3. assert
+(subset (fvs ([x' // x]N)) (fvs x' ++ remove x (fvs N))).  apply subst_subset.
+simpl in H5. apply (cons_subset x') in H3. apply subset_trans with
+(ys:=x'::remove x (fvs N)). assumption. assumption. Qed. 
 
+(* We use the convention of a single quote termator for definitions over the
+well-formed configuration subset, e.g. step', configuration' *)
+
+Definition configuration' := {c | well_formed c}.
+
+Definition step' (c1 c2: configuration') : Prop := match (c1, c2) with
+  | (exist c1' _, exist c2' _) => step c1' c2' end.
+      
+(* Collapsing configuration to term 
+Fixpoint collapse (h : heap) : tm → tm :=  match h with
+  | nil => id 
+  | cons (x, e') t => compose (subst x (collapse t e')) (collapse t)
+  end.
+
+Example collapse_simple : collapse (0↦:λ0, 0  :: nil) 0 = :λ0, 0.
+eauto. Qed. 
+
+Lemma well_formed_collapse : forall h, well_formed_heap h -> 
+  ∀ n t, In n (fvs (collapse h t)) -> In n (fvs t) /\ ~In n (domain h).
+intros h wf. induction h. crush. destruct a. intros. simpl in wf. destruct wf.
+simpl in H. unfold compose in H.  assert (subset (fvs ([collapse h t //
+n]collapse h t0)) (fvs (collapse h t) ++ remove n (fvs (collapse h t0)))). apply
+subst_subset. rewrite <- subset_eq in H2. apply H2 in H. clear H2. rewrite in_app_iff in
+H. destruct H.  rewrite <- subset_eq in H0. apply IHh in H. crush. assumption. 
+destruct (eq_nat_dec n0 n). subst. apply remove_in in H. inversion H. apply
+remove_not_in in H. apply IHh in H. crush. assumption. assumption. Qed.
+
+Lemma well_formed_collapse_closed : forall h t, well_formed_heap h ->
+closed_under (st h t) -> closed (collapse h t).
+intros. assert (∀ n t, In n (fvs (collapse h t)) -> In n (fvs t) /\ ~In n
+(domain h)). apply well_formed_collapse. assumption. unfold closed. unfold
+closed_under. simpl. rewrite <- subset_eq. unfold subset'. intros. apply H1 in
+H2. simpl. destruct H2. unfold closed_under in H0. rewrite <- subset_eq in H0.
+apply H0 in H2. apply H3 in H2. assumption. Qed. 
+
+*)

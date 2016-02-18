@@ -25,10 +25,12 @@ Notation " ⟨ Φ , b , Ψ ⟩ N " := (st (append _ Ψ (cons b Φ)) N) (at level
 Notation " { M , e } " := (cl M e).
 Notation " < M , e > " := (close M e).
 
+(* cactus lookup: lookup deBruijn index i at location x in heap h yields
+location y *)
 Inductive cactus_lookup : nat → nat → heap → nat → Prop :=
-  | zero : forall x Φ M Υ, cactus_lookup 0 x (append _ Φ (cons (x ↦ M) Υ)) x
+  | zero : forall x Φ M Υ, cactus_lookup 0 x (Φ ++ (x ↦ M) :: Υ) x
   | pred : forall x y z Φ M Υ i, cactus_lookup i x Φ z → 
-            cactus_lookup (S i) y (append _ Φ (cons (y ↦ {M, x}) Υ)) z.
+            cactus_lookup (S i) y (Φ ++ (y ↦ {M, x}):: Υ) z.
 
 Definition lookup {a} (x:nat) (l:list (nat * a)) : option a := 
   match find (λ p, beq_nat x (fst p)) l with 
@@ -73,6 +75,10 @@ Inductive step : configuration → configuration → Prop :=
       ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓ ⟨Υ⟩close (:λB') ae   →
               ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩close (:λB') ae
 where " c1 '⇓' c2 " := (step c1 c2).
+
+Definition configuration' := sig well_formed.
+Definition step' (c1 c2: configuration') : Prop := match (c1, c2) with
+  | (exist c1 _, exist c2 _) => step c1 c2 end.
 
 Lemma well_formed_inf : ∀ c x c' n  Φ Υ, well_formed (⟨Φ, x ↦ cl c' n, Υ⟩c) → 
   well_formed (⟨Φ, x ↦ cl c' n, Υ⟩c').
