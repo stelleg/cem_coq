@@ -1,5 +1,3 @@
-#!/usr/bin/runhaskell
-
 import Development.Shake
 import Development.Shake.FilePath
 

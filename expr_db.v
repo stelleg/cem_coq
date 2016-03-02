@@ -1,21 +1,28 @@
-Require Vector.
+Require expr.
+Require Import List Datatypes.
+Require Import Arith.Peano_dec.
+Require Import db util.
 
-Definition db_ind := Fin.t.
-Inductive expr (n : nat) : Type := 
-  | var : db_ind n -> expr n
-  | lam : expr (S n) -> expr n
-  | app : expr n -> expr n -> expr n.
-
-Definition value {n} (t : expr n) : Prop := match t with
-  | lam _ => True
-  | _ => False
+(* Compiles standard expressions to terms with deBruijn indices *)
+Fixpoint db (t : expr.tm) (env : Map nat nat) : option tm := match t with 
+  | expr.var v => match lookup eq_nat_dec v env with
+    | Some v' => Some (var v')
+    | None => None
+    end
+  | expr.abs v b => match db b ((v, 0):: map (fmap S) env) with 
+    | Some b' => Some (lam b')
+    | None => None
+    end
+  | expr.app m n => match db m env with
+    | Some m' => match db n env with 
+      | Some n' => Some (app m' n')
+      | None => None
+      end
+    | None => None
+    end
   end.
 
-Notation " :λ N " := (forall n, lam n N) (at level 20).
-Notation " M @ N " := (forall n, app n M N) (at level 60). 
-Coercion var : db_ind >-> expr.
-
-Example term_1 : expr 0 := lam 0 (var 1 Fin.F1).
-Example term_2 : expr 0 := app 0 term_1 term_1.
-
+(* We say two expressions are alpha equivalent if they compile to the same
+deBruijn term *)
+Definition alpha_equiv (t1 t2 : expr.tm) : Prop := db t1 = db t2.
 

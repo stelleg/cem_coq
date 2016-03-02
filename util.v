@@ -1,8 +1,12 @@
+(* General utility file, should break up into smaller modules, e.g. Maps, Sets,
+etc. *)
+
 Require Import List Basics EqNat Logic.Decidable.
 Require Import Arith.Peano_dec.
 Require Import CpdtTactics.
 Require Import Logic.ProofIrrelevance.
 Require Import Unicode.Utf8.
+Require Import Compare_dec.
 
 Definition Map a b := list (a * b).
 
@@ -12,7 +16,7 @@ Fixpoint subset {A} (l : list A) (m: list A) : Prop := match l with
   | nil => True
   | cons x xs => In x m /\ subset xs m
   end.
-
+Notation " a ⊆ b " := (subset a b) (at level 30).
 Definition rel (A : Type) := A → A → Prop.
 Definition relation (A B : Type) := A → B → Prop.
 Definition equiv {A B} := ∀ (a a':A) (b b':B) (ra : rel A) (rb : rel B)
@@ -305,3 +309,10 @@ intros. apply forevery_app in H. crush. Qed.
 Lemma forevery_impl {a} : ∀ xs (p p':a→Prop), (∀ a, p a → p' a) → forevery xs p →
   forevery xs p'. 
 intros. induction xs. crush. crush. Qed. 
+  
+Definition max (m n : nat) : nat := match le_gt_dec m n with 
+  | left _ => m
+  | right _ => n
+  end.
+
+Definition maximum : list nat → nat := fold_right max 0.

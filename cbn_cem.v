@@ -1,7 +1,44 @@
-Require Import Unicode.Utf8.
-Require Import bisim db List NaryFunctions.
-Require cem cbn expr expr_db_nat util relations.
-Require Import CpdtTactics.
+Require cem cbn expr db relations.
+Require Import Unicode.Utf8 List NaryFunctions.
+Require Import expr_db util CpdtTactics.
+Require Import Basics.
+
+Definition fresh (e : list nat) (h : cem.heap):= maximum (e ++ domain h). 
+
+(* Takes the closure from a configuration and converts it into the flattened
+configuration, so its free variables are pointing directly to the correct
+location*) 
+Definition closure_to_expr (c : cem.configuration) : option expr.tm 
+  := match c with | cem.conf h (cem.close t e') => let fix cte t e' e :=
+    match t with
+    | db.lam b => let f := fresh e h in 
+      match cte b e' (f :: e) with
+      | Some b' => Some (expr.abs f b')
+      | None => None
+      end
+    | db.var v => match nth_error e v with
+      | Some l => Some (expr.var l)
+      | None => match cem.clu v e' h with
+        | Some (l', _) => Some (expr.var l')
+        | None => None
+        end
+      end
+    | db.app m n => match cte m e' e with
+      | Some m' => match cte n e' e with 
+        | Some n' => Some (expr.app m' n')
+        | None => None
+        end
+      | None => None
+      end
+    end
+    in cte t e' nil
+  end.
+
+(*
+Definition flatten (c: {c | cem.well_formed c}) : cbn.configuration := match c with
+  | exist (cem.conf h c) p => cbn.st (map (fmap (closure_to_expr ∘ cem.conf h ∘ cem.clclose) h))
+                         (closure_to_expr nil h c)
+  end.
 
 (* TODO : Proper relation *)
 Inductive cem_cbn_rel : relation cem.configuration cbn.configuration :=
@@ -11,9 +48,10 @@ Lemma cem_cbn_bisim : strong_bisim cem.configuration cbn.configuration
                                    cem.step          cbn.step
                                    cem_cbn_rel.
 Admitted. 
+Qed. 
 
 (*Well formed configurations can be collapsed into a closed deBruijn term*)
-Theorem well_formed_cbn_closed_db : ∃ c, cbn.well_formed c ↔ ∃ e, expr_db_nat.closed e.
+Theorem well_formed_cbn_closed_db : ∃ c, cbn.well_formed c ↔ ∃ e, db.closed e.
 intros. destruct c. induction (expr.fvs t). destruct H. 
 induction h. destruct H. crush. assert (expr.closed t).
 unfold expr.closed. apply util.subset_nil2. assumption. apply dbf. split with
@@ -39,7 +77,7 @@ Fixpoint subst_cbn_config' vs e : expr.tm := match vs with
   | (x,m)::hs => subst_cbn_config' hs (cbn.subst x m e)
   end.
 
-Definition subst_cbn_config (st : cbn.configuration) : expr_db_nat.expr := match st with
+Definition subst_cbn_config (st : cbn.configuration) : db.expr := match st with
   | cbn.st hs e => deBruijn (subst_cbn_config' hs e)
   end.
 
@@ -50,5 +88,6 @@ intros. split.
   apply app_cons_not_nil in H. inversion H.  apply ex_intro with (cbn.st nil
   (expr.abs v b)). assert (cbn.step (cbn.st nil (expr.abs v b)) (cbn.st nil
   (expr.abs v b))).  apply cbn.Abs. split. assumption. 
-    apply init. with (cem.st nil (cem.close (expr_db_nat.lam b') 0))
+    apply init. with (cem.st nil (cem.close (db.lam b') 0))
                     (cbn.st nil (expr.abs v b)).
+                  *)

@@ -1,6 +1,5 @@
 Require Import util.
 Require Import Unicode.Utf8.
-Require Import expr_db_nat.
 
 Definition Word := nat.
 Definition Ptr := nat.
@@ -22,17 +21,8 @@ Inductive Op : Type :=
   | add : Reg → Reg → Op.
 
 Inductive Instr : Type :=
-  | op : Reg -> Op -> Instr -> Instr
-  | jump : Ptr -> Instr
+  | op : Reg → Op → Instr → Instr
+  | jump : Ptr → Instr
   | halt : Instr.
 
-Definition Heap := Map Ptr Word.
 Definition Program := Map Ptr Instr.
-Definition RegisterFile := Reg → Word.
-
-Inductive State := 
-  | st : RegisterFile → Program → Stack → Heap → State.
-
-Definition assemble : expr_db_nat.expr → Program.
-Admitted. 
-

@@ -8,5 +8,9 @@ Requirements:
 
 To Build: `./build.hs` (requires runhaskell and Shake, the Haskell build system) 
 
-
+Notes: 
+We use the convention that filenames correspond to that datatype and theorems
+, supporting datatypes, transitions for those datatypes, while filenames with
+underscores, e.g.  `c1_c2.v` represents the connections between `c1` and
+`c2`. 
 

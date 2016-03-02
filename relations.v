@@ -13,6 +13,16 @@ Inductive refl_trans_clos {X} (f : transition X) : transition X :=
   | t_refl (x : X) : refl_trans_clos f x x
   | t_step (x y z : X) : f x y → refl_trans_clos f y z → refl_trans_clos f x z.
 
+Lemma t_step2 {X} : ∀ (f : transition X) (x y z : X), f y z → refl_trans_clos f x y →
+  refl_trans_clos f x z. 
+intros. induction H0. apply t_step with (y:=z). assumption. apply t_refl. apply
+IHrefl_trans_clos in H. apply (t_step f x y z); assumption. Qed. 
+
+Lemma refl_trans_clos_app {X} : ∀ (f : transition X) (x y z : X), 
+  refl_trans_clos f x y → refl_trans_clos f y z → refl_trans_clos f x z. 
+intros. induction H. auto. apply IHrefl_trans_clos in H0. rename y into Y. apply
+t_step with (y:=Y); auto. Qed. 
+
 (* p and q are bisimilar *)
 Notation "p '~' q" := (∃ fp fq R, strong_bisim p q fp fq R) (at level 30). 
 
@@ -53,6 +63,11 @@ Definition partial_order {X:Type} (R: relation X X) :=
 
 Inductive next_nat (n : nat) : nat → Prop := 
     | succ : next_nat n (S n).
+
+Lemma next_nat_le : ∀ m n, refl_trans_clos next_nat m n ↔ le m n.
+intros. split. intros. induction H. auto. inversion H. subst. apply le_S in
+IHrefl_trans_clos. apply le_S_n. assumption. intros. induction H. apply t_refl.
+apply t_step2 with (y:=m0). apply succ. auto. Qed. 
 
 (* simple bisimulation *)
 Theorem bisim_next_nat_eq : strong_bisim nat nat next_nat next_nat eq. 

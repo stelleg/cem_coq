@@ -1,8 +1,7 @@
 (* Based on figure 8 of ariola et al *) 
 Require Import Lists.List Decidable CpdtTactics Program.Basics.
 Require Import Unicode.Utf8_core.
-Require Import expr util db.
-Require expr_db_nat.
+Require Import expr util.
 Require Import Arith.Peano_dec.
 
 Definition heap := list (nat * tm). 
@@ -23,7 +22,7 @@ Definition I (e : tm ) : configuration := st nil e.
 
 (* Direct description of Maraist et al. Figure 8, with amendment from  *)
 Reserved Notation " c1 '⇓' c2 " (at level 50).
-Inductive step : configuration -> configuration -> Prop :=
+Inductive step : configuration → configuration → Prop :=
   | Id : ∀ M N y x Φ Ψ Υ, ⟨Φ, x ↦ M, Υ⟩M ⇓ ⟨Ψ, x ↦ M, Υ⟩:λy,N →
             ⟨Φ, x ↦ M, Υ⟩var x ⇓ ⟨Ψ, x ↦ :λy,N, Υ⟩:λy,N
   | Abs : ∀ N x Φ,  ⟨Φ⟩:λx,N ⇓ ⟨Φ⟩:λx,N
@@ -94,35 +93,12 @@ simpl. rewrite H0. rewrite remove_replace_comp. reflexivity. assumption.
 assumption. unfold not. intros. rewrite H2 in n0. assert (x = x). reflexivity.
 apply n0 in H3. assumption. Qed.
 
-Lemma monotonic_heap : forall c1 c2, c1 ⇓ c2 -> 
-subset (domain (stheap c1)) (domain (stheap c2)).  
+Lemma monotonic_heap : ∀ c1 c2, c1 ⇓ c2 → domain (stheap c1) ⊆ domain (stheap c2).  
 intros c1 c2 step.  induction step. simpl. simpl in IHstep. 
 unfold domain at 2. unfold domain at 2 in IHstep. rewrite map_app. rewrite
 map_app in IHstep.  simpl. simpl in IHstep. assumption. 
 apply subset_id. simpl. simpl in IHstep1. simpl in IHstep2. destruct IHstep2. 
 apply subset_trans with (ys:=domain Ψ). assumption. assumption. Qed.
-
-(*
-Lemma well_formed_var : forall Φ Ψ Υ x n v, well_formed (⟨Ψ, x↦n, Υ⟩x) -> subset
-  (domain Ψ) (domain Φ) → well_formed (⟨Φ, x↦v, Υ⟩v).
-intros. split. simpl. unfold domain. rewrite map_app. apply subset_comm2. apply
-subset_app.  apply subset_cons. destruct H1. unfold closed_under in H1.
-assumption. inversion H as [H' H2].  induction Υ. simpl. destruct H1. unfold
-closed_under in H1. split; assumption.  destruct a. simpl in H2. destruct H2.
-simpl. split. unfold domain. rewrite map_app.  unfold domain in H2. rewrite
-map_app in H2.  apply subset_comm2 in H2. simpl in H2. apply subset_comm2.
-simpl.  rewrite cons_app. rewrite cons_app in H2. rewrite app_comm_cons.
-rewrite app_comm_cons in H2. apply subset_comm2. rewrite <- app_assoc. apply
-subset_comm2 in H2.  rewrite <- app_assoc in H2. apply subset_comm2. apply
-subset_comm2 in H2.  unfold domain in H0. apply subset_app_id with (xs :=
-((((map (fst (B:=tm)) Υ ++ x :: nil))))) in H0. apply subset_trans with (ys :=
-((map (fst (B:=tm)) Υ ++ x :: nil) ++ map (fst (B:=tm)) Ψ)). assumption.
-assumption.  apply well_formed_app in H.  destruct H. clear H'. clear H4. unfold
-closed_under in H. apply subset_app with (zs:=domain (Υ ++ x↦n :: nil)) in H.
-assert (well_formed (⟨Ψ, x ↦n, Υ ⟩ x)). split. unfold closed_under. unfold
-domain.  rewrite map_app. apply subset_comm2. simpl. auto. assumption. apply
-IHΥ.  assumption. destruct H4. assumption. assumption. Qed.
-*)
 
 Theorem well_formed_step : ∀ c1 c2, well_formed c1 → c1 ⇓ c2 → well_formed c2.
 intros. induction H0. apply well_formed_app in H. apply IHstep in H. apply
@@ -140,14 +116,6 @@ subset_cons. assumption. assumption. simpl. simpl in H3. destruct H3. assert
 simpl in H5. apply (cons_subset x') in H3. apply subset_trans with
 (ys:=x'::remove x (fvs N)). assumption. assumption. Qed. 
 
-(* We use the convention of a single quote termator for definitions over the
-well-formed configuration subset, e.g. step', configuration' *)
-
-Definition configuration' := {c | well_formed c}.
-
-Definition step' (c1 c2: configuration') : Prop := match (c1, c2) with
-  | (exist c1' _, exist c2' _) => step c1' c2' end.
-      
 (* Collapsing configuration to term 
 Fixpoint collapse (h : heap) : tm → tm :=  match h with
   | nil => id 
