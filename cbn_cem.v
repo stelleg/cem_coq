@@ -34,6 +34,7 @@ Definition closure_to_expr (c : cem.configuration) : option expr.tm
     in cte t e' nil
   end.
 
+
 (*
 Definition flatten (c: {c | cem.well_formed c}) : cbn.configuration := match c with
   | exist (cem.conf h c) p => cbn.st (map (fmap (closure_to_expr ∘ cem.conf h ∘ cem.clclose) h))

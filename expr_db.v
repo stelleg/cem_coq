@@ -5,7 +5,7 @@ Require Import db util.
 
 (* Compiles standard expressions to terms with deBruijn indices *)
 Fixpoint db (t : expr.tm) (env : Map nat nat) : option tm := match t with 
-  | expr.var v => match lookup eq_nat_dec v env with
+  | expr.var v => match lookup v env with
     | Some v' => Some (var v')
     | None => None
     end

@@ -4,6 +4,12 @@ Definition relation (X : Type) (Y : Type) := X → Y → Prop.
 
 Definition transition (X : Type) := X → X → Prop.
 
+Definition deterministic {A} (step : transition A) := ∀ a b c, 
+  step a b → 
+  step a c →
+  b = c
+.
+
 Definition strong_bisim (A B : Type) (fa : transition A) (fb : transition B) (R : relation A B) :
   Prop := ∀ a b, R a b → 
           (∀ a', fa a a' → ∃ b', fb b b' ∧ R a' b')
@@ -13,15 +19,34 @@ Inductive refl_trans_clos {X} (f : transition X) : transition X :=
   | t_refl (x : X) : refl_trans_clos f x x
   | t_step (x y z : X) : f x y → refl_trans_clos f y z → refl_trans_clos f x z.
 
-Lemma t_step2 {X} : ∀ (f : transition X) (x y z : X), f y z → refl_trans_clos f x y →
-  refl_trans_clos f x z. 
-intros. induction H0. apply t_step with (y:=z). assumption. apply t_refl. apply
-IHrefl_trans_clos in H. apply (t_step f x y z); assumption. Qed. 
+Inductive refl_trans_clos' {X} (f : transition X) : transition X :=
+  | t_refl' (x : X) : refl_trans_clos' f x x
+  | t_step' (x y z : X) : refl_trans_clos' f x y → f y z → refl_trans_clos' f x z. 
 
 Lemma refl_trans_clos_app {X} : ∀ (f : transition X) (x y z : X), 
   refl_trans_clos f x y → refl_trans_clos f y z → refl_trans_clos f x z. 
 intros. induction H. auto. apply IHrefl_trans_clos in H0. rename y into Y. apply
 t_step with (y:=Y); auto. Qed. 
+
+Lemma refl_trans_clos'_app {X} : ∀ (f : transition X) (x y z : X), 
+  refl_trans_clos' f x y → refl_trans_clos' f y z → refl_trans_clos' f x z. 
+intros. induction H0. auto. apply IHrefl_trans_clos' in H. rename y into Y.
+apply t_step' with (y:=Y). assumption. assumption. Qed.
+
+Lemma rtc_eq {X} : ∀ f (x y:X), refl_trans_clos f x y ↔ refl_trans_clos' f x y. 
+intros. split; intros. induction H. apply t_refl'. rename y into Y. apply
+refl_trans_clos'_app with (y:=Y). apply t_step' with (y:=x). apply t_refl'.
+assumption. assumption. induction H. apply t_refl. rename y into Y.  apply refl_trans_clos_app
+with (y:=Y). assumption. apply t_step with (y:=z).  assumption. apply t_refl.
+Qed.
+
+Lemma t_step2 {X} : ∀ (f : transition X) (x y z : X), f y z → refl_trans_clos f x y →
+  refl_trans_clos f x z. 
+intros. induction H0. apply t_step with (y:=z). assumption. apply t_refl. apply
+IHrefl_trans_clos in H. apply (t_step f x y z); assumption. Qed. 
+
+Definition normal_form {X} (x : X) (t : transition X) := ¬∃ x', t x x'.
+Definition normal_form_of {X} (t : transition X) (x x' : X) := t x x' ∧ normal_form x' t.
 
 (* p and q are bisimilar *)
 Notation "p '~' q" := (∃ fp fq R, strong_bisim p q fp fq R) (at level 30). 
