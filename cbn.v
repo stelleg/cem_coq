@@ -18,9 +18,6 @@ Notation " ⟨ Φ , b , Ψ ⟩ N " := (st (Datatypes.app Ψ (cons b Φ)) N) (at 
 
 Definition I (e : tm ) : configuration := st nil e.
 
-Definition fresh' {A} (x: nat) (Φ : Map nat A) :=
-  ∃ p, fresh Φ = exist (isfresh Φ) x p. 
-
 (* Direct description of Maraist et al. Figure 8, with amendment from  *)
 Reserved Notation " c1 '⇓' c2 " (at level 50).
 Inductive step : configuration → configuration → Prop :=

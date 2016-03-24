@@ -62,10 +62,15 @@ Fixpoint forevery {a} (l:list a) (p : a → Prop) : Prop := match l with
   | nil => True
   end.
 
+Lemma forevery_map {A B} : ∀ (f:A→B) xs p, forevery (map f xs) p = forevery xs (compose p f).
+intros. induction xs. simpl. auto. simpl. f_equal. assumption. Qed.
+
 Definition domain {a b} (m : Map a b) : list a := map (@fst a b) m.
 
 Definition isfresh {a} (h : Map nat a) (n : nat) : Prop := ¬ In n (domain h). 
 Axiom fresh : ∀ {a:Type} (h:Map nat a), {n | isfresh h n}.
+Definition fresh' {A} (x: nat) (Φ : Map nat A) :=
+  ∃ p, fresh Φ = exist (isfresh Φ) x p. 
 
 Inductive unique {a} : list a → Prop := 
   | unil : unique nil
@@ -316,12 +321,25 @@ Lemma in_domain_lookup {b} : ∀ (m : Map nat b) k, In k (domain m) →
   destruct H. unfold lookup. simpl. rewrite <- beq_nat_false_iff in n0. rewrite
   n0. exists x. unfold lookup in H. rewrite H. reflexivity. Qed.
 
+Lemma lookup_in_domain {b} : ∀ (m : Map nat b) k, (∃ v, lookup k m = Some v) → 
+  In k (domain m). 
+intros. destruct H. induction m. inversion H. destruct (eq_nat_dec k (fst a)).
+destruct a. simpl in e. subst. simpl. auto. unfold lookup in H. simpl in H. rewrite <-
+beq_nat_false_iff in n. rewrite n in H. apply IHm in H. simpl. apply or_intror.
+assumption. Qed.
+
+Lemma lookup_in_domain_iff {b} : ∀ (m : Map nat b) k, 
+(∃ v, lookup k m = Some v) 
+        ↔
+  In k (domain m). 
+split. apply lookup_in_domain. apply in_domain_lookup. Qed. 
+
 Lemma subset_domain_map {b} : ∀ l (m : Map nat b), subset l (domain m) → forevery l (λ k,
   ∃ v, lookup k m = Some v).
 intros. induction l. crush. simpl in H. destruct H. apply IHl in H0. simpl.
 split. Focus 2. assumption. apply in_domain_lookup. assumption. Qed. 
 
-Lemma forevery_map {b} : ∀ (m : Map nat b) p l v, forevery_codomain m p →
+Lemma forevery_codomain_lookup {b} : ∀ (m : Map nat b) p l v, forevery_codomain m p →
   lookup l m = Some v → p v.
 intros. induction m. inversion H0. destruct a. destruct (eq_nat_dec l n). subst.
 unfold lookup in H0.  simpl in H0.  rewrite <- beq_nat_refl in H0. inversion H0.
