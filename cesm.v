@@ -141,6 +141,15 @@ apply forevery_app in H. destruct H. assumption. split; auto. split. split;
 auto. apply forevery_app in H. destruct H. assumption. simpl in H3. assumption.
 Qed. 
 
+Notation " c1 '→s*' c2 " := (refl_trans_clos step' c1 c2) (at level 30). 
+Definition normalize (c1 c2 : state) := refl_trans_clos step' c1 c2 ∧ state_value c2.
+Definition normalize2 (c1 c2 : state) := refl_trans_clos step2 c1 c2 ∧ state_value c2.
+Notation " c1 '↦s*' c2 " := (normalize c1 c2) (at level 30). 
+
+Lemma well_formed_steps : ∀ s1 s2, well_formed s1 → s1 →s* s2 → well_formed s2.
+intros. induction H0. assumption. apply IHrefl_trans_clos. apply
+well_formed_step with (a:=x); assumption. Qed.
+
 Lemma step_determ : ∀ c1 c2 c3, well_formed c1 → c1 →s c2 → c1 →s c3 → c2 = c3.
 intros. inversion H0; subst; inversion H1; subst. f_equal. apply unique_inf in
 H3. destruct H3. destruct H3. subst. inversion H3. subst. reflexivity.
@@ -156,11 +165,6 @@ H5. subst. inversion H5. subst. inversion H4. subst. inversion H0. subst.
 rewrite H1 in H7. inversion H7. subst. reflexivity. subst. inversion H0; subst.
 rewrite H1 in H8. inversion H8. subst. reflexivity. subst. inversion H0. subst.
 reflexivity. Qed. 
-
-Notation " c1 '→s*' c2 " := (refl_trans_clos step' c1 c2) (at level 30). 
-Definition normalize (c1 c2 : state) := refl_trans_clos step' c1 c2 ∧ state_value c2.
-Definition normalize2 (c1 c2 : state) := refl_trans_clos step2 c1 c2 ∧ state_value c2.
-Notation " c1 '↦s*' c2 " := (normalize c1 c2) (at level 30). 
 
 Lemma normalize2_determ : deterministic normalize2.  
 unfold deterministic. intros. destruct H. induction H. destruct H0. induction H.
