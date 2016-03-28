@@ -32,12 +32,8 @@ intros. apply t_step with (y:=b2s (⟨Φ ⟩ close M e) (inl (close N e)::s)).
 apply App'. 
 apply refl_trans_clos_app with (y:=b2s (⟨Ψ, f ↦ {close N e, ne} ⟩ close B f) s).
 apply t_step2 with (y:=b2s (⟨Ψ ⟩ close (db.lam B) ne) (inl (close N e):: s)).
-simpl. rename e into E. rename s into S. apply Abs' with (b:=B) (e:=ne)
-(c:=close N E) (s:= S) in H.  
-assumption.
-auto. 
-auto. 
-Qed. 
+simpl. rename e into E. rename s into S. destruct H. apply Abs' with (p:=x).
+assumption. apply IHstep1. apply IHstep2. Qed. 
 
 Lemma cem_cesm_nf : ∀ c v Φ Ψ, conf Φ c ⇓ conf Ψ v → st Φ nil c ↦s* st Ψ nil v. 
 intros. split. apply cem_cesm with (s:=nil) in H. simpl in H. assumption.
@@ -80,25 +76,10 @@ step_stack_app with (z:=z0) in H. apply t_step with (y:=st ((f,cl c0 e) :: Φ) (
 with (z:=z0) in H. apply t_step with (y:=st Φ (inl (close n e) :: a ++ z0)
 (close m e)). assumption. assumption. Qed.
 
-Lemma rtc_step_stack_app' : ∀ a b z c c' Φ Ψ, st Φ (a++z) c →s* st Ψ (b++z) c'
-                                    → st Φ a c →s* st Ψ b c'. 
-intros. remember (st Φ (a++z) c). remember (st Ψ (b++z) c'). generalize
-dependent a. generalize dependent Φ. generalize dependent c.  generalize
-dependent Ψ. generalize dependent c'. generalize dependent b. generalize
-dependent z. induction H; intros; subst. inversion Heqs; subst; clear Heqs.
-apply app_eq_r in H1. subst. apply t_refl. destruct y. specialize
-(IHrefl_trans_clos z0 b c' Ψ eq_refl st_closure st_heap). inversion H; subst.
-destruct a. simpl in H3.  subst. simpl in H. assert (inr l :: st_stack = ((inr l
-:: nil) ++ st_stack)).  auto. rewrite H1 in H. clear H1. replace st_stack
-with (nil++st_stack) in H; auto.  auto.  rewrite (st_stack = nil
-++ st_stack) by auto in H. in H by auto. . .  rewrite <- app_comm_cons in H. 
-apply step_stack_app' in H. 
-simpl in H. subst. apply st_step. 
-IHrefl_trans_clos.   
-
 (* This is much harder, need induction so that  *) 
 Lemma cesm_cem : ∀ Φ c Ψ v, st Φ nil c ↦s* st Ψ nil v  
                              → conf Φ c ⇓ conf Ψ v.
+                             Admitted.
 (* Induction on steps *)
 (*
 intros. remember (st Φ nil c). remember (st Ψ nil v).

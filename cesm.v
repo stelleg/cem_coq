@@ -32,6 +32,7 @@ Fixpoint lefts {a b} (l : list (a + b)) : list a := match l with
 
 Definition well_formed (st : state) : Prop := match st with 
   | st h s c => closed_under c h ∧ well_formed_heap h ∧ forevery (lefts s) (flip closed_under h)
+                ∧ unique (domain (st_heap st))
   end.
 
 Definition replaceClosure (l:nat) (c:closure) : nat * cell → nat * cell := 
@@ -68,10 +69,85 @@ Inductive step2 : state → state → Prop :=
   st Φ s (close (app m n) e) →s2 st Φ (inl (close n e)::s) (close m e)
 where " c1 '→s2' c2 " := (step2 c1 c2).
 
+
+Lemma well_formed_upd : ∀ c l v n s Φ Υ, 
+  well_formed (st (Υ ++ l ↦ cl c n :: Φ) s v) → 
+  well_formed (st (Υ ++  l ↦ cl v n :: Φ) (inr l::s) v).
+intros. split. inversion H. destruct H1. unfold well_formed_heap in H1. apply
+forevery_app in H1.  destruct H1. simpl in H3. destruct H3. apply
+closed_under_inf' with (c':= c). assumption. split. destruct H. destruct H0.
+apply forevery_app. split. apply forevery_app in H0. destruct H0. refine
+(forevery_impl _ _ _ _ H0). intros. destruct a. destruct c0. apply
+closed_under_inf' with (c':=c). assumption. simpl. split. apply
+closed_under_inf' with (c':=c). assumption. apply forevery_app in H0. destruct
+H0. simpl in H2. destruct H2. refine (forevery_impl _ _ _ _ H3). intros.
+destruct a. destruct c0. apply closed_under_inf' with (c':=c). assumption.
+split. simpl. destruct H. destruct H0. destruct H1. refine (forevery_impl _ _ _
+_ H1). intros. unfold flip. unfold flip in H3. apply closed_under_inf' with
+(c':=c). assumption. destruct H. destruct H0. destruct H1. simpl. simpl in H2.
+rewrite domain_inf with (m':=cl c n). assumption. Qed.
+
 Lemma unique_step : ∀ a b, unique (domain (st_heap a)) → a →s b → 
   unique (domain (st_heap b)). 
 intros. destruct H0; simpl in H; simpl; try assumption. rewrite domain_inf with
 (m' := {c, e'}). assumption. apply ucons. assumption. assumption. Qed. 
+
+Lemma forevery_lookup {B} : ∀ m p k (v:B), forevery m p → lookup k m = Some v → p (k,v).
+intros. induction m. inversion H0. destruct H. destruct a. destruct (eq_nat_dec
+k n). subst. unfold lookup in H0. simpl in H0. rewrite <- beq_nat_refl in H0.
+inversion H0. subst. assumption. unfold lookup in H0. simpl in H0. apply
+beq_nat_false_iff in n0. rewrite n0 in H0. specialize (IHm H1 H0). assumption.
+Qed.
+
+Lemma forevery_clu : ∀ x m p n c e, forevery m p → clu x e m = Some (n, c) → ∃ e',
+p (n, cl c e'). intros x. induction x; intros. simpl in H0. remember (lookup e m).
+destruct o. symmetry in Heqo. destruct c0. inversion H0. subst. exists n0. apply
+(forevery_lookup _ _ _ _ H Heqo). inversion H0. simpl in H0. destruct (lookup e
+m). destruct c0. apply (IHx m p n c n0 H H0). inversion H0. Qed.
+
+Lemma closed_under_cons : ∀ m f cell c, fresh' f m → closed_under c m → closed_under c
+  (f↦cell::m).
+intros. unfold closed_under. destruct c. refine (forevery_impl _ _ _ _ H0).
+intros. destruct H1. destruct H1. exists x, x0. destruct H1. split. 
+destruct cell. apply clu_cons. assumption. assumption. apply (or_intror H2).
+Qed. 
+
+Lemma well_formed_step : ∀ a b, well_formed a → a →s b → well_formed b. 
+intros. inversion H0; subst. 
+apply well_formed_upd with (c:=c). assumption.
+destruct H. destruct H2. destruct H3. split. apply forevery_clu with
+(x:=v) (n:=l) (c:=c) (e:=e) in H2. destruct H2. assumption. assumption. split;
+auto. split. destruct H. simpl in H. simpl. induction (fvs b0). auto. destruct
+a. simpl. unfold lookup. simpl. rewrite <- beq_nat_refl. split. exists f, c.
+auto.  apply IHl in H. assumption.  simpl. split. unfold lookup. simpl. rewrite <-
+beq_nat_refl. simpl in H. destruct H. apply IHl in H3. destruct H. destruct H.
+exists x, x0. split. apply clu_cons. split with (x:=p); assumption. destruct H.
+assumption. destruct H. apply or_intror. assumption. apply IHl. simpl in H.
+destruct H. assumption. split. unfold well_formed_heap. simpl. split; auto.
+destruct H. destruct H2. destruct H3. simpl in H3. destruct H3. unfold flip in
+H3. unfold closed_under. destruct c. refine (forevery_impl _ _ _ _ H3). intros.
+destruct H6. destruct H6. exists x, x0. split. apply clu_cons. split with (x:=p);
+assumption. destruct H6. assumption. destruct H6. unfold In. simpl. apply
+(or_intror H7). destruct H. destruct H2. refine (forevery_impl _ _ _ _ H2).
+intros. destruct a. destruct c0. unfold closed_under. destruct c0. refine
+(forevery_impl _ _ _ _ H4). intros. destruct H5. destruct H5. destruct H5.
+exists x, x0. split; auto. apply clu_cons. split with (x:=p); assumption.
+assumption. simpl. apply (or_intror H6). split. destruct H. destruct H2.
+destruct H3. simpl in H3. destruct H3. refine (forevery_impl _ _ _ _ H5).
+intros. unfold flip. apply closed_under_cons. split with (x:=p); assumption.
+assumption. simpl. apply ucons. assumption. destruct H. destruct H2. destruct
+H3. assumption. destruct H. destruct H1. destruct H2. simpl. split. simpl in H.
+apply forevery_app in H. destruct H. assumption. split; auto. split. split;
+auto. apply forevery_app in H. destruct H. assumption. simpl in H3. assumption.
+Qed. 
+
+Lemma step_determ : ∀ c1 c2 c3, well_formed c1 → c1 →s c2 → c1 →s c3 → c2 = c3.
+intros. inversion H0; subst; inversion H1; subst. f_equal. apply unique_inf in
+H3. destruct H3. destruct H3. subst. inversion H3. subst. reflexivity.
+destruct H. destruct H2. apply unique_step in H1. simpl in H1. rewrite
+domain_inf with (m':= {close (lam b) e,e'0}). assumption. destruct H4.
+assumption. rewrite H2 in H8. inversion H8. reflexivity. rewrite H2 in H9.
+inversion H9. subst. reflexivity. reflexivity. Qed. 
 
 Lemma step2_determ : deterministic step2. 
 unfold deterministic. intros. inversion H. inversion H0. subst. inversion

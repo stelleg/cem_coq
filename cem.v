@@ -123,6 +123,10 @@ intros. destruct H0. destruct H0. destruct H0. apply clu_inf with
 clos_tm1 clos_env1). split. assumption.  rewrite domain_inf with (m':=cl c' e).
 assumption. assumption. Qed.
 
+Lemma closed_under_inf_eq : ∀ c c' c'' e x Ψ Φ, closed_under c (Φ ++ x ↦ {c', e}
+:: Ψ) ↔ closed_under c (Φ ++ x ↦ {c'', e} :: Ψ).
+split; apply closed_under_inf'. Qed.
+
 Lemma well_formed_inf' : ∀ Φ Ψ x c c' n,
   well_formed (⟨Φ, x ↦ cl c' n, Ψ⟩c) →
   well_formed (⟨Φ, x ↦ cl c n, Ψ⟩c).
