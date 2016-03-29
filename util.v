@@ -66,6 +66,7 @@ Lemma forevery_map {A B} : ∀ (f:A→B) xs p, forevery (map f xs) p = forevery 
 intros. induction xs. simpl. auto. simpl. f_equal. assumption. Qed.
 
 Definition domain {a b} (m : Map a b) : list a := map (@fst a b) m.
+Definition codomain {a b} (m : Map a b) : list b := map (@snd a b) m.
 
 Definition isfresh {a} (h : Map nat a) (n : nat) : Prop := ¬ In n (domain h). 
 Axiom fresh : ∀ {a:Type} (h:Map nat a), {n | isfresh h n}.
@@ -310,6 +311,12 @@ apply IHm in H. simpl. subst. exists (Some b). unfold lookup. simpl. rewrite <-
 beq_nat_refl. reflexivity. destruct H. simpl in H. symmetry in H. apply n0 in H.
 inversion H. unfold lookup. simpl. rewrite <- beq_nat_false_iff in n0. rewrite
 n0. apply IHm in H. assumption. Qed. 
+
+Definition lookup_codomain {B} : ∀ (m : Map nat B) a b, lookup a m = Some b → In b
+(codomain m). 
+intros. induction m. inversion H. simpl. unfold lookup in H. simpl in H.
+destruct a0. simpl in H. destruct (beq_nat a n). simpl. inversion H. subst.
+auto. apply IHm in H. auto. Qed. 
 
 Definition flip {A B C} (f : A → B → C) : B → A → C := fun b a => f a b.
 
