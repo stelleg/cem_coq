@@ -62,6 +62,10 @@ Fixpoint forevery {a} (l:list a) (p : a → Prop) : Prop := match l with
   | nil => True
   end.
 
+Inductive related_lists {a b} (r : a → b → Prop) : list a → list b → Prop :=
+  | rel_nil : related_lists r nil nil
+  | rel_cons : ∀ x xs y ys, r x y → related_lists r xs ys → related_lists r (x::xs) (y::ys).
+
 Lemma forevery_map {A B} : ∀ (f:A→B) xs p, forevery (map f xs) p = forevery xs (compose p f).
 intros. induction xs. simpl. auto. simpl. f_equal. assumption. Qed.
 
@@ -73,6 +77,13 @@ Axiom fresh : ∀ {a:Type} (h:Map nat a), {n | isfresh h n}.
 Definition fresh' {A} (x: nat) (Φ : Map nat A) :=
   ∃ p, fresh Φ = exist (isfresh Φ) x p. 
 
+Definition homotopy {A B} (f g : A→B) := ∀ x, f x = g x.
+Notation "f ~ g" := (homotopy f g) (at level 60).  
+
+Lemma map_homo {A B} : ∀ (f g:A→B), f ~ g → map f ~ map g. 
+unfold homotopy. intros. induction x. auto. simpl. rewrite H. rewrite IHx. auto.
+Qed. 
+
 Inductive unique {a} : list a → Prop := 
   | unil : unique nil
   | ucons : ∀ x xs, ¬ In x xs → unique xs → unique (cons x xs). 
@@ -83,6 +94,8 @@ Definition fmap {A B C} (f : B -> C) : A * B -> A * C  := fun x => match x with
 Definition forevery_codomain {a b} (m:Map a b) (p : b → Prop) : Prop := forevery
   m (λ x, match x with (k,v) => p v end).
 
+Lemma snd_fmap {A} : (λ x:A*nat, pred (snd (fmap S x))) ~ (λ x:A*nat, snd x). 
+intros. unfold homotopy. intros. destruct x. reflexivity. Qed. 
 
 Lemma domain_fmap : forall A B C (f:B->C) (xs:Map A B),  domain (map
 (fmap f) xs) = domain xs.
@@ -119,6 +132,11 @@ rewrite <- H1. assumption. assumption. Qed.
 
 Lemma subset_nil : forall A ms, subset (@nil A) ms.
 intros. unfold subset. auto. Qed. 
+
+Lemma subset_map {A B} : ∀ xs ys (f:A→B), xs ⊆ ys → map f xs ⊆ map f ys. 
+intros xs. induction xs; intros. apply subset_nil. intros. simpl in H. simpl.
+split. destruct H. apply in_map. assumption. apply IHxs. destruct H. assumption.
+Qed. 
 
 Lemma subset_nil2 : forall A ms, subset ms (@nil A) -> ms = nil.
 intros. rewrite <- subset_eq in H. unfold subset' in H. induction ms.
@@ -297,54 +315,41 @@ left. reflexivity. repeat (apply subset_cons). apply subset_id. right. left.
 reflexivity. split. left. reflexivity. repeat (apply subset_cons). apply
 subset_id. Qed.
 
-Definition lookup {a} (x:nat) (l:list (nat * a)) : option a := 
+Definition lookup {a} (x:nat) (l:Map nat a) : option a := 
   match find (λ p, beq_nat x (fst p)) l with 
     | None => None
     | Some (k,v) => Some v
   end.
 
-Definition lookup_total {B} : ∀ (m : Map nat B) a, In a (domain m) → ∃ b,
-  lookup a m = b. 
-intros. induction m. crush. simpl in H. destruct a0. destruct (eq_nat_dec a n). destruct H. simpl in H.
-simpl. symmetry in e. subst. exists (Some b). unfold lookup. simpl. rewrite <- beq_nat_refl.  reflexivity.
-apply IHm in H. simpl. subst. exists (Some b). unfold lookup. simpl. rewrite <-
-beq_nat_refl. reflexivity. destruct H. simpl in H. symmetry in H. apply n0 in H.
-inversion H. unfold lookup. simpl. rewrite <- beq_nat_false_iff in n0. rewrite
-n0. apply IHm in H. assumption. Qed. 
+Definition lookup_total {B} : ∀ (m : Map nat B) a, In a (domain m) → 
+  {b | lookup a m = Some b}. 
+induction m; simpl; intros. inversion H. unfold lookup. destruct a. simpl.
+destruct (beq_nat a0 n) eqn:Heqe. exists b. reflexivity. apply IHm. intuition.
+simpl in H0. subst. rewrite <- beq_nat_refl in Heqe. inversion Heqe. Defined.
 
-Definition lookup_codomain {B} : ∀ (m : Map nat B) a b, lookup a m = Some b → In b
-(codomain m). 
+Definition lookup_codomain {B} : ∀ (m : Map nat B) a b, lookup a m = Some b → In b (codomain m). 
 intros. induction m. inversion H. simpl. unfold lookup in H. simpl in H.
 destruct a0. simpl in H. destruct (beq_nat a n). simpl. inversion H. subst.
-auto. apply IHm in H. auto. Qed. 
+auto. apply IHm in H. auto. Defined. 
 
 Definition flip {A B C} (f : A → B → C) : B → A → C := fun b a => f a b.
 
-Lemma in_domain_lookup {b} : ∀ (m : Map nat b) k, In k (domain m) →
-  ∃ v, lookup k m = Some v.
-  intros. induction m. crush. destruct a. simpl in H. destruct (eq_nat_dec k n).
-  subst. simpl. unfold lookup. simpl. rewrite <- beq_nat_refl. apply ex_intro with b0. reflexivity.
-  simpl. destruct H. symmetry in H. apply n0 in H. inversion H. apply IHm in H.
-  destruct H. unfold lookup. simpl. rewrite <- beq_nat_false_iff in n0. rewrite
-  n0. exists x. unfold lookup in H. rewrite H. reflexivity. Qed.
+Definition in_domain_lookup {B} := @lookup_total B. 
 
-Lemma lookup_in_domain {b} : ∀ (m : Map nat b) k, (∃ v, lookup k m = Some v) → 
+Lemma lookup_domain {b} : ∀ (m : Map nat b) k v, lookup k m = Some v → 
   In k (domain m). 
-intros. destruct H. induction m. inversion H. destruct (eq_nat_dec k (fst a)).
-destruct a. simpl in e. subst. simpl. auto. unfold lookup in H. simpl in H. rewrite <-
-beq_nat_false_iff in n. rewrite n in H. apply IHm in H. simpl. apply or_intror.
-assumption. Qed.
+intros. induction m. inversion H. unfold lookup in H. simpl in H. destruct a.
+simpl in H. destruct (beq_nat k n) eqn:Heqe. inversion H. subst. simpl. apply
+or_introl. apply beq_nat_true in Heqe. symmetry in Heqe. assumption. apply IHm
+in H. simpl. apply or_intror. assumption. Qed.
 
-Lemma lookup_in_domain_iff {b} : ∀ (m : Map nat b) k, 
-(∃ v, lookup k m = Some v) 
-        ↔
-  In k (domain m). 
-split. apply lookup_in_domain. apply in_domain_lookup. Qed. 
+Definition tosig {A} : ∀ p:A → Prop, {x | p x} → ∃ x, p x. 
+intros. destruct X. exists x. assumption. Qed. 
 
 Lemma subset_domain_map {b} : ∀ l (m : Map nat b), subset l (domain m) → forevery l (λ k,
   ∃ v, lookup k m = Some v).
 intros. induction l. crush. simpl in H. destruct H. apply IHl in H0. simpl.
-split. Focus 2. assumption. apply in_domain_lookup. assumption. Qed. 
+split. Focus 2. assumption. apply tosig. apply in_domain_lookup. assumption. Qed. 
 
 Lemma forevery_codomain_lookup {b} : ∀ (m : Map nat b) p l v, forevery_codomain m p →
   lookup l m = Some v → p v.

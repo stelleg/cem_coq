@@ -48,9 +48,6 @@ IHrefl_trans_clos in H. apply (t_step f x y z); assumption. Qed.
 Definition normal_form {X} (x : X) (t : transition X) := ¬∃ x', t x x'.
 Definition normal_form_of {X} (t : transition X) (x x' : X) := t x x' ∧ normal_form x' t.
 
-(* p and q are bisimilar *)
-Notation "p '~' q" := (∃ fp fq R, strong_bisim p q fp fq R) (at level 30). 
-
 Definition partial_function {X Y: Type} (R: relation X Y) :=
   ∀ (x : X) (y1 y2 : Y), R x y1 → R x y2 → y1 = y2. 
 

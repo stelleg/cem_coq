@@ -92,24 +92,24 @@ Lemma clu_inf : ∀ x x' c c' e e'  Ψ Φ clo n,
   ∃ clo', clu x e (Φ ++ x' ↦ cl c' e' :: Ψ) = Some (n, clo').
 intros x. induction x. intros. simpl in H. remember (lookup e (Φ ++ x' ↦ cl c e' :: Ψ)).
 simpl. destruct o. symmetry in Heqo. apply (ex_intro (λ x, lookup e (Φ ++ x' ↦ cl
-c e' :: Ψ) = Some x) c0) in Heqo. apply lookup_in_domain in Heqo. rewrite
-domain_inf with (m':= cl c' e') in Heqo. apply in_domain_lookup in Heqo.
-destruct Heqo. rewrite H0. destruct x. destruct c0. inversion H. subst. clear H.
-exists c1. reflexivity. inversion H. intros. specialize (IHx x' c c').
-simpl in H. remember (lookup e (Φ ++ x' ↦  cl c e' :: Ψ)). destruct o.  destruct
-c0. specialize (IHx n0 e' Ψ Φ clo n H). destruct IHx. simpl. remember (lookup e (Φ ++
-x' ↦ cl c' e' :: Ψ)). destruct o. destruct c1. assert (n1 = n0). clear H0. clear
-H. induction Φ.  simpl in Heqo. simpl in Heqo0. unfold lookup in Heqo. unfold
-lookup in Heqo0.  simpl in Heqo. simpl in Heqo0. destruct (beq_nat e x').
-inversion Heqo. subst.  inversion Heqo0. subst. reflexivity. rewrite <- Heqo in
-Heqo0.  inversion Heqo0.  subst. reflexivity. destruct a. unfold lookup in Heqo.
-unfold lookup in Heqo0. simpl in Heqo. simpl in Heqo0. destruct (beq_nat e n2). 
-rewrite <- Heqo in Heqo0. inversion Heqo0. subst. reflexivity. simpl in Heqo.
-simpl in Heqo0. apply IHΦ. assumption. assumption. subst. exists x0. assumption. symmetry
-in Heqo. apply (ex_intro (λ x, lookup e (Φ ++ x' ↦ cl c e' :: Ψ) = Some x) (cl
-c0 n0)) in Heqo. apply lookup_in_domain in Heqo. rewrite domain_inf with (m':=cl
-c' e') in Heqo. apply in_domain_lookup in Heqo. destruct Heqo. rewrite H1 in
-Heqo0. inversion Heqo0. inversion H. Qed. 
+c e' :: Ψ) = Some x) c0) in Heqo. destruct Heqo. apply lookup_domain in H0. rewrite
+domain_inf with (m':= cl c' e') in H0. apply in_domain_lookup in H0.
+destruct H0. rewrite e0. destruct x. destruct c0. inversion H. subst. clear H.
+destruct x0.  exists c0. reflexivity. inversion H. intros. specialize (IHx x' c
+c').  simpl in H. remember (lookup e (Φ ++ x' ↦  cl c e' :: Ψ)). destruct o.
+destruct c0. specialize (IHx n0 e' Ψ Φ clo n H). destruct IHx. simpl. remember
+(lookup e (Φ ++ x' ↦ cl c' e' :: Ψ)). destruct o. destruct c1. assert (n1 = n0).
+clear H0. clear H. induction Φ.  simpl in Heqo. simpl in Heqo0. unfold lookup in
+Heqo. unfold lookup in Heqo0.  simpl in Heqo. simpl in Heqo0. destruct (beq_nat
+e x').  inversion Heqo. subst.  inversion Heqo0. subst. reflexivity. rewrite <-
+Heqo in Heqo0.  inversion Heqo0.  subst. reflexivity. destruct a. unfold lookup
+in Heqo.  unfold lookup in Heqo0. simpl in Heqo. simpl in Heqo0. destruct
+(beq_nat e n2).  rewrite <- Heqo in Heqo0. inversion Heqo0. subst. reflexivity.
+simpl in Heqo.  simpl in Heqo0. apply IHΦ. assumption. assumption. subst. exists
+x0. assumption. symmetry in Heqo. apply (ex_intro (λ x, lookup e (Φ ++ x' ↦ cl c
+e' :: Ψ) = Some x) (cl c0 n0)) in Heqo. destruct Heqo. apply lookup_domain in H1. rewrite
+domain_inf with (m':=cl c' e') in H1. apply in_domain_lookup in H1. destruct
+H1. rewrite e0 in Heqo0. inversion Heqo0. inversion H. Qed. 
 
 Lemma closed_under_inf' : ∀ c c' c'' e x Ψ Φ, closed_under c (Φ ++ x ↦ {c', e} :: Ψ) →
   closed_under c (Φ ++ x ↦ {c'', e} :: Ψ).
@@ -152,12 +152,12 @@ Lemma clu_cons : ∀ c c' x ne ne' xs f,
 intros c c' x. induction x; intros. simpl in H0. remember (lookup ne xs). destruct
 o. destruct c0. symmetry in Heqo. assert (lu:=Heqo). apply (ex_intro (λ x, lookup ne xs = Some x)
 (cl c0 n)) in Heqo. simpl. unfold lookup. simpl. destruct (eq_nat_dec ne f).
-subst. apply lookup_in_domain in Heqo. apply H in Heqo. inversion Heqo. rewrite
+subst. destruct Heqo. apply lookup_domain in H1. apply H in H1. inversion H1. rewrite
 <- beq_nat_false_iff in n0. rewrite n0.  unfold lookup in lu. rewrite lu.
 assumption. inversion H0. destruct (eq_nat_dec ne f). subst. simpl in H0.
 remember (lookup f xs). destruct o. symmetry in Heqo. assert (lu:=Heqo). apply
-(ex_intro (λ x, lookup f xs = Some x) c0) in Heqo. apply lookup_in_domain in
-Heqo. apply H in Heqo. inversion Heqo. inversion H0. simpl. unfold lookup.
+(ex_intro (λ x, lookup f xs = Some x) c0) in Heqo. destruct Heqo. apply lookup_domain in
+H1. apply H in H1. inversion H1. inversion H0. simpl. unfold lookup.
 rewrite <- beq_nat_false_iff in n. simpl. rewrite n. simpl in H0. unfold lookup
 in H0. destruct (find (λ p : nat * cell, beq_nat ne (fst p)) xs). destruct p.
 destruct c0. apply IHx. assumption. assumption. inversion H0. Qed.
