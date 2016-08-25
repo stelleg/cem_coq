@@ -55,6 +55,9 @@ Lemma fvs_lam_dom : forall v b d, subset (fvs (abs v b)) d <-> subset (fvs b) (v
 intros. split; intros. simpl in H. rewrite subset_remove_cons. assumption.
 simpl. rewrite <- subset_remove_cons. assumption. Qed.
 
+Lemma fvs_body_remove : ∀ x v b, In x (remove v (fvs b)) → In x (fvs (abs v b)). 
+intros. simpl. assumption. Qed. 
+
 Definition replace' : nat -> nat -> nat -> nat := fun y z x => if eq_nat_dec y x then z else x.
 Definition replace (y z:nat) := map (replace' y z).
 

@@ -108,7 +108,7 @@ m). destruct c0. apply (IHx m p n c n0 H H0). inversion H0. Qed.
 Lemma closed_under_cons : ∀ m f cell c, fresh' f m → closed_under c m → closed_under c
   (f↦cell::m).
 intros. unfold closed_under. destruct c. refine (forevery_impl _ _ _ _ H0).
-intros. destruct H1. destruct H1. exists x, x0. destruct H1. split. 
+intros. destruct H. destruct H1. destruct H1. exists x0, x1. destruct H1. split. 
 destruct cell. apply clu_cons. assumption. assumption. apply (or_intror H2).
 Qed. 
 
@@ -121,17 +121,17 @@ auto. split. destruct H. simpl in H. simpl. induction (fvs b0). auto. destruct
 a. simpl. unfold lookup. simpl. rewrite <- beq_nat_refl. split. exists f, c.
 auto.  apply IHl in H. assumption.  simpl. split. unfold lookup. simpl. rewrite <-
 beq_nat_refl. simpl in H. destruct H. apply IHl in H3. destruct H. destruct H.
-exists x, x0. split. apply clu_cons. split with (x:=p); assumption. destruct H.
+exists x, x0. split. apply clu_cons. assumption. destruct H.
 assumption. destruct H. apply or_intror. assumption. apply IHl. simpl in H.
 destruct H. assumption. split. unfold well_formed_heap. simpl. split; auto.
 destruct H. destruct H2. destruct H3. simpl in H3. destruct H3. unfold flip in
 H3. unfold closed_under. destruct c. refine (forevery_impl _ _ _ _ H3). intros.
-destruct H6. destruct H6. exists x, x0. split. apply clu_cons. split with (x:=p);
-assumption. destruct H6. assumption. destruct H6. unfold In. simpl. apply
+destruct H6. destruct H6. exists x, x0. split. apply clu_cons. assumption. 
+destruct H6. assumption. destruct H6. unfold In. simpl. apply
 (or_intror H7). destruct H. destruct H2. refine (forevery_impl _ _ _ _ H2).
 intros. destruct a. destruct c0. unfold closed_under. destruct c0. refine
 (forevery_impl _ _ _ _ H4). intros. destruct H5. destruct H5. destruct H5.
-exists x, x0. split; auto. apply clu_cons. split with (x:=p); assumption.
+exists x, x0. split; auto. apply clu_cons. assumption.
 assumption. simpl. apply (or_intror H6). split. destruct H. destruct H2.
 destruct H3. simpl in H3. destruct H3. refine (forevery_impl _ _ _ _ H5).
 intros. unfold flip. apply closed_under_cons. split with (x:=p); assumption.

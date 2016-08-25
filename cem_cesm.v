@@ -17,14 +17,10 @@ intros c v H. induction H. simpl. simpl in IHstep.
 assert (∀ s, step' (st (Υ ++ (x ↦ {M,y} :: Φ)) s (close (db.var v) z)) 
                    (st (Υ ++ (x ↦ {M,y} :: Φ)) (inr x::s) M)).
 intros. apply Var'. assumption. 
-assert (∀ s, step' (st (Υ ++ x ↦ {M, y} :: Ψ) (inr x :: s) (close (db.lam B) e))
-                   (st (Υ ++ x ↦ {close (db.lam B) e, y} :: Ψ) s (close (db.lam B) e)))
-.
-apply Upd. 
 intros. rename y into Y.  
 apply t_step with (y:=[Υ ++ x ↦ {M, Y} :: Φ, inr x :: s | M]). auto. 
-apply t_step2 with (y:= [Υ ++ x ↦ {M, Y} :: Ψ, inr x :: s | (close (db.lam B) e)]). 
-auto. auto.   
+apply t_step2 with (y:= [Υ' ++ x ↦ {M, Y} :: Φ', inr x :: s | (close (db.lam B) e)]). 
+apply Upd. auto. 
 (* Lam *)
 intros. apply t_refl. 
 (* App *)

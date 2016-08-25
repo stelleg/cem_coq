@@ -1,9 +1,10 @@
 Require Import db util.
 Require Import Arith.EqNat.
 Require Import List Unicode.Utf8 Arith.Peano_dec Basics.
-Require Import CpdtTactics.
+Require Import CpdtTactics JRWTactics.
+Require Import Datatypes.
 
-Definition append := Datatypes.app.
+Import ListNotations. 
 
 Record closure : Type := close {
   clos_tm : tm;
@@ -27,7 +28,7 @@ Definition I (e : tm) : configuration := conf nil (close e 0).
 Notation " x ↦ M " := (x, M) (at level 40).
 Notation " ⟨ Φ ⟩ m " := (conf Φ m) (at level 40).
 Notation " ⟨ Ψ , b ⟩ N " := (conf (cons b Ψ) N) (at level 40).
-Notation " ⟨ Φ , b , Ψ ⟩ N " := (conf (append _ Ψ (cons b Φ)) N) (at level 40).
+Notation " ⟨ Φ , b , Ψ ⟩ N " := (conf (Ψ ++ (cons b Φ)) N) (at level 40).
 Notation " { M , e } " := (cl M e).
 Notation " < M , e > " := (close M e).
 
@@ -62,9 +63,9 @@ Definition well_formed (c : configuration) : Prop := match c with
 
 Reserved Notation " c1 '⇓' c2 " (at level 50).
 Inductive step : configuration → configuration → Prop :=
-  | Id : ∀ M B x y z Φ Ψ Υ v e, clu v z (Υ ++ x ↦ {M,y} :: Φ) = Some (x, M) → 
-            ⟨Φ, (x ↦ {M,y}), Υ⟩M ⇓ ⟨Ψ, (x ↦ {M,y}), Υ⟩close (:λB) e →
-    ⟨Φ, x ↦ {M, y}, Υ⟩close (var v) z ⇓ ⟨Ψ, x ↦ {close (:λB) e, y}, Υ⟩close (:λB) e
+  | Id : ∀ M B x y z Φ Φ' Υ Υ' v e, clu v z (Υ ++ x ↦ {M,y} :: Φ) = Some (x, M) → 
+            ⟨Φ, (x ↦ {M,y}), Υ⟩M ⇓ ⟨Φ', (x ↦ {M,y}), Υ'⟩close (:λB) e →
+    ⟨Φ, x ↦ {M, y}, Υ⟩close (var v) z ⇓ ⟨Φ', x ↦ {close (:λB) e, y}, Υ'⟩close (:λB) e
   | Abs : ∀ N Φ e, ⟨Φ⟩close (:λN) e ⇓ ⟨Φ⟩close (:λN) e
   | App : ∀ N M B B' Φ Ψ Υ f e ne ae, 
                   fresh' f Ψ → 
@@ -138,7 +139,7 @@ clear H3 H0. apply forevery_impl with (p:=(λ x : nat * cell,
         let (_, c0) := x in
         match c0 with
         | {c1, _} =>
-            closed_under c1 (append (nat * cell) Ψ (X ↦ {c', n} :: Φ))
+            closed_under c1 (Ψ ++ (X ↦ {c', n} :: Φ))
         end)).
 intros.
 destruct a. destruct c0. apply closed_under_inf' with (c':=c'). assumption.
@@ -146,7 +147,7 @@ assumption. destruct H. destruct H0. rewrite domain_inf with (m':=cl c' n).
 assumption. Qed.
 
 Lemma clu_cons : ∀ c c' x ne ne' xs f,
-  fresh' f xs →
+  isfresh xs f →
   clu x ne xs = Some c → 
   clu x ne (f↦cl c' ne'::xs) = Some c.
 intros c c' x. induction x; intros. simpl in H0. remember (lookup ne xs). destruct
@@ -166,19 +167,15 @@ Lemma clu_monotonic : ∀ Φ Ψ x e c v l cl,
   clu x e Φ = Some (l,cl) →
   ⟨Φ⟩c ⇓ ⟨Ψ⟩v  →
   ∃ cl', clu x e Ψ = Some (l, cl').
-intros. remember (conf Φ c). remember (conf Ψ v). generalize dependent c.
-generalize dependent v. generalize dependent l. generalize dependent cl0.
-generalize dependent x. generalize dependent Φ. generalize dependent Ψ.
-generalize dependent e. induction H0; intros. inversion Heqc0. inversion
-Heqc1. subst. specialize (IHstep e0 (Υ ++ x ↦ {M, y} :: Ψ) (Υ ++
-x ↦ {M, y} :: Φ) x0 cl0 l H1 (close (lam B) e) eq_refl M eq_refl). destruct
-IHstep. apply clu_inf with (c':=close (lam B) e) in H2. assumption. 
-inversion Heqc1. inversion Heqc0. subst. inversion Heqc0. subst. exists cl0.
-assumption. inversion Heqc1. subst. inversion Heqc0. subst. clear Heqc1. clear
-Heqc0. apply IHstep1 with (Ψ0:=Ψ)(v:=close (lam B) ne) (c:= close M e) in
+intros. prep_induction H0. induction H0; intros; subst. inversion H3. inversion
+H2. subst. apply IHstep with (Ψ:=Υ' ++ x ↦ {M, y} :: Φ') (c:=M) (v:=close
+(lam B) e) in H1. destruct H1. apply clu_inf with (c':=close (lam B) e) in H1.
+apply H1. reflexivity. reflexivity. inversion H3. inversion H2. subst. subst.
+exists cl0. assumption. inversion H3. inversion H2. subst. 
+apply IHstep1 with (Ψ0:=Ψ)(v:=close (lam B) ne) (c:= close M e) in
 H0; try reflexivity. destruct H0. apply IHstep2 with (Φ:=f↦(cl (close N e)
 ne)::Ψ) (cl0:=x0) (c:=close B f) (v:=close (lam B') ae). apply clu_cons.
-assumption. assumption. reflexivity. reflexivity. Qed. 
+destruct H. assumption. assumption. reflexivity. reflexivity. Qed. 
 
 Lemma monotonic_heap : ∀ c1 c2, c1 ⇓ c2 → domain (st_heap c1) ⊆ domain (st_heap c2).  
 intros c1 c2 step.  induction step. simpl. simpl in IHstep. 
@@ -198,13 +195,13 @@ assumption.  unfold lookup. simpl. rewrite <- beq_nat_refl. exists f, (close N
 e). split; auto. simpl. simpl in H. destruct H. split; try (apply IHl;
 assumption). unfold compose in H. simpl in H.  unfold lookup. simpl. rewrite <-
 beq_nat_refl.  destruct H. destruct H. exists x , x0. destruct H. split; auto.
-apply clu_cons; assumption. unfold well_formed_heap. simpl. split. apply
+destruct H0. apply clu_cons; assumption. unfold well_formed_heap. simpl. split. apply
 forevery_impl with (p:=(λ x : nat,
         ∃ (e' : nat) (c' : closure),
         clu x e Φ = Some (e' ↦ c') ∧ In e' (domain Φ))). 
 intros. destruct H3.
 destruct H3. destruct H3.  apply (clu_monotonic Φ Ψ a e (close M e)
-(close (lam B) ne) x x0) in H3. destruct H3. exists x, x1. split. apply
+(close (lam B) ne) x x0) in H3. destruct H3. exists x, x1. split. destruct H0. apply
 clu_cons.  assumption. assumption. apply or_intror. apply monotonic_heap
 in H0_. simpl in H0_. rewrite <- subset_eq in H0_. apply H0_ in H4.
 assumption. assumption. assumption. inversion IHstep1. destruct H4. unfold
@@ -216,7 +213,7 @@ intros. destruct a. destruct c. unfold closed_under. destruct c. unfold
 closed_under in H6. apply forevery_impl with (p:=(λ x : nat,
         ∃ (e' : nat) (c' : closure),
         clu x clos_env0 Ψ = Some (e' ↦ c') ∧ In e' (domain Ψ))).
-intros. destruct H7. destruct H7. destruct H7. exists x, x0. split. apply
+intros. destruct H7. destruct H7. destruct H7. exists x, x0. split. destruct H0. apply
 clu_cons; assumption. simpl. auto. assumption. assumption. apply ucons. simpl.
 destruct H0.  assumption. destruct IHstep1. destruct H4. unfold domain in H5.
 assumption. Qed. 

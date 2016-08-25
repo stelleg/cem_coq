@@ -5,9 +5,9 @@ import Data.Maybe
 
 main = shakeArgs shakeOptions $ do  
   want ["compiler.vo"]
-  "*.vo" %> \out -> do
+  "//*.vo" %> \out -> do
     let source = out -<.> ".v"
     deps <- cmd $ "coqdep -I . " ++ source 
     need $ fromMaybe [] $ lookup out $ parseMakefile $ fromStdout deps
-    cmd $ "coqc " ++ source
+    cmd $ "coqc -I . " ++ source
   phony "clean" $ removeFilesAfter "." ["//*.vo", "//*.glob"]

@@ -1,10 +1,13 @@
 Require Import Unicode.Utf8.
 Require Import Decidable.
-Require expr.
+Require Import Minus.
+Require expr util.
 Require Import List Datatypes util.
 Require Import FunctionalExtensionality CpdtTactics. 
 Require Import Arith.Peano_dec.
+Require Import Arith.Compare_dec.
 Require Import Program.Basics.
+Require Import Basics EqNat.
 Set Implicit Arguments.
 
 Inductive tm : Type := 
@@ -26,6 +29,30 @@ Definition closed (e:tm) := fvs e = nil.
 Notation " :λ N " := (lam N) (at level 20).
 Notation " M @ N " := (app M N) (at level 60). 
 Coercion var : nat >-> tm.
+
+Fixpoint fvs' (t:tm) (d:nat) : list nat := match t with
+  | lam b => fvs' b (S d)
+  | app m n => fvs' m d ++ fvs' n d
+  | var v => if gt_dec d v then nil else (v-d)::nil
+  end.
+
+Lemma fvs_eq : ∀ t d, map (λ x, x - d) (filter (λ x, if gt_dec d x then false
+else true) (fvs t)) = fvs' t d.
+intros t. induction t; intros. simpl. destruct (gt_dec d n). reflexivity. simpl.
+reflexivity. simpl. assert (∀ xs d, map (λ x : nat, x - S d) (filter (λ x : nat, if gt_dec
+(S d) x then false else true) xs) = map (λ x :
+nat, x - d) (filter (λ x : nat, if gt_dec d x then false else true) (map pred
+(remove 0 xs)))). intros. induction xs. reflexivity. destruct a. simpl. apply
+IHxs. simpl. destruct (gt_dec d0 a). apply Gt.gt_n_S in g. destruct (gt_dec (S
+d0) (S a)). apply IHxs. apply n in g. inversion g. destruct (gt_dec (S d0) (S
+a)). apply Gt.gt_S_n in g. apply n in g. inversion g. simpl. rewrite IHxs.
+reflexivity. specialize IHt with (S d). rewrite <- IHt. rewrite H. reflexivity.
+simpl. rewrite <- IHt1. rewrite <- IHt2. rewrite <- map_app. rewrite <-
+filter_app. reflexivity. Qed. 
+
+Lemma fvs_eq_zero : ∀ t, fvs t = fvs' t 0.
+intros. rewrite <- fvs_eq. simpl. induction (fvs t). simpl. reflexivity. 
+simpl. rewrite <- minus_n_O. rewrite <- IHl. reflexivity. Qed. 
 
 Example term_1 : tm := lam (var 0).
 Example term_2 : tm := app term_1 term_1.
