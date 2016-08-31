@@ -274,6 +274,111 @@ intros. induce H1.
   assumption. unfold isfresh.  rewrite domain_app. assumption. inversion H1_.
   subst. rewrite domain_app.  apply unique_app. assumption. Qed. 
 
+Definition linkage : heap → Map nat nat := map (λ x, match x with 
+  | (x, cl _ l) => (x, l) 
+  end).
+
+Lemma domain_linkage : ∀ x h, In x (domain h) → ∃ y, In (x,y) (linkage h).
+intros. induction h. inversion H. destruct a. simpl in H. inversion H.  subst.
+destruct c. exists n. simpl. auto. simpl. destruct c. apply IHh in H0. destruct
+H0. exists x0. auto. Qed. 
+
+Lemma linkage_domain : ∀ x y h, In (x,y) (linkage h) → In x (domain h). 
+intros. induction h. inversion H. destruct a. destruct c. inversion H. inversion
+H0. subst. simpl. auto. simpl. auto. Qed. 
+
+Lemma linkage_monotonic_reachable : ∀ Φ Φ' Υ c v,
+  ⟨Φ & Υ⟩c ⇓ ⟨Φ' & Υ⟩v  →
+  linkage Φ ⊆ linkage Φ'. 
+intros. induce H. 
+- inversion H1. inversion H2. subst. clear H1 H2 H8. 
+  unfold linkage. rewrite map_app. rewrite map_app. apply subset_comm2. apply
+  subset_comm1. simpl. split. auto. apply subset_cons. apply subset_comm1. apply
+  subset_comm2. apply subset_app_id.  eapply IHstep; reflexivity. 
+- inversion H1. inversion H2. subst. subst. apply subset_id. 
+- inversion H2. inversion H3. subst. clear H2 H3 H9. apply subset_trans with
+  (ys:=linkage (f↦cl (close N e) ne::Φ')). simpl. apply subset_cons. eapply
+  IHstep1; try reflexivity. eapply IHstep2; try reflexivity. 
+Qed. 
+
+Lemma linkage_lookup : ∀ Φ x n, 
+  unique (domain Φ) → 
+  In (x ↦ n) (linkage Φ) → 
+  ∃ c, lookup x Φ = Some (cl c n). 
+intros.  induction Φ. inversion H0. destruct a. destruct c. inversion H. subst.
+inversion H0. inversion H1. subst. exists c. apply linkage_domain in H0. apply
+in_domain_lookup in H0. destruct H0. assert (e':=e). unfold lookup in e. unfold
+find in e. simpl in e. rewrite <- beq_nat_refl in e. inversion e. subst.
+assumption. unfold lookup. unfold find. simpl. destruct (beq_nat x n0) eqn:ben.
+apply beq_nat_true in ben. subst. apply linkage_domain in H1. apply H3 in H1.
+inversion H1. apply IHΦ. assumption. assumption. Qed. 
+
+Lemma lookup_in {a} : ∀ (Φ:Map nat a) x y,
+  lookup x Φ = Some y →
+  In (x, y) Φ. 
+intros. induction Φ. inversion H. simpl. unfold lookup in H. unfold find in H.
+simpl in H. destruct a0. simpl in H. destruct (beq_nat x n) eqn:ben. inversion
+H. subst. apply beq_nat_true in ben. subst. auto. apply IHΦ in H. auto. Qed. 
+
+Lemma lookup_linkage : ∀ Φ x n c,
+  lookup x Φ = Some (cl c n) →
+  In (x ↦ n) (linkage Φ). 
+intros. apply lookup_in in H. unfold linkage. rewrite in_map_iff. exists (x ↦ cl
+c n). auto. Qed. 
+
+Lemma linkage_lu : ∀ Φ Φ' x c n,
+  unique (domain Φ') →
+  linkage Φ ⊆ linkage Φ' → 
+  lookup x Φ = Some (cl c n) →
+  ∃ c', lookup x Φ' = Some (cl c' n).
+intros. apply lookup_linkage in H1. rewrite <- subset_eq in H0. apply H0 in H1.
+apply linkage_lookup in H1. assumption. assumption. Qed.
+
+Lemma clu_luf : ∀ x e c Φ, 
+  clu x e Φ = Some c →
+  ∃ x, lookup e Φ = Some x. 
+intros. destruct x; simpl in H; destruct (lookup e Φ). exists c0. reflexivity.
+inversion H. exists c0. reflexivity. inversion H. Qed. 
+
+Lemma clu_zero : ∀ e l c Φ,
+  clu 0 e Φ = Some (l, c) →
+  e = l ∧ ∃ n, lookup l Φ = Some (cl c n) .
+intros. inversion H. destruct (lookup e Φ) eqn:lue. destruct c0 eqn:c0e.
+inversion H1. rewrite <- H3. rewrite H2 in *. rewrite lue. split; auto. exists
+n. auto. inversion H1. Qed. 
+
+Lemma clu_succ : ∀ x e l c Φ,
+  clu (S x) e Φ = Some (l, c) → 
+  ∃ e' c', lookup e Φ = Some (cl c' e') ∧ 
+  clu x e' Φ = Some (l, c). 
+intros. simpl in H. destruct (lookup e Φ) eqn:lue. destruct c0 eqn:c0e. exists
+n, c1. auto. inversion H. Qed. 
+
+Lemma linkage_clu : ∀ Φ Φ' x e l cl, 
+  unique (domain Φ') →
+  linkage Φ ⊆ linkage Φ' → 
+  clu x e Φ = Some (l, cl) →
+  ∃ cl', clu x e Φ' = Some (l, cl').
+intros. rewrite <- subset_eq in H0. generalize dependent e.
+induction x; intros.  
+- simpl. apply clu_zero in H1. destruct H1. destruct H2. subst. apply
+  lookup_linkage in H2. apply H0 in H2. apply linkage_lookup in H2. destruct H2.
+  rewrite H1. exists x0. reflexivity. assumption. 
+- assert (H1':=H1). apply clu_succ in H1. destruct H1. destruct H1. destruct H1.
+  apply IHx in H2. destruct H2. apply lookup_linkage in H1. apply H0 in H1.
+  apply linkage_lookup in H1. destruct H1. exists x2. simpl. rewrite H1.
+  assumption. assumption. 
+Qed. 
+
+Lemma clu_monotonic_reachable : ∀ Ψ x e c v l cl Ψ' Υ, 
+  unique (domain (Υ ++ Ψ)) →
+  clu x e Ψ  = Some (l,cl) →
+  ⟨Ψ & Υ⟩c ⇓ ⟨Ψ' & Υ⟩v  →
+  ∃ cl', clu x e Ψ'  = Some (l, cl').
+intros. assert (H1':=H1).  apply linkage_monotonic_reachable in H1. eapply linkage_clu in H1; try
+auto. apply H1. apply unique_domain_step in H1'. rewrite domain_app in H1'.
+apply unique_weaken_app in H1'.  assumption. assumption. apply H0. Qed. 
+
 Lemma closed_under_comm : ∀ h h' c , 
   unique (domain (h ++ h')) →
   closed_under c (h ++ h') → 
@@ -284,6 +389,36 @@ intros. specialize (H0 x H1). rewrite clu_app in H0; auto. Qed.
 Lemma in_comm {a} : ∀ l l' (x:a) , In x (l ++ l') <-> In x (l' ++ l).
 split; intros; rewrite in_app_iff; rewrite or_comm; rewrite <- in_app_iff;
 assumption. Qed.
+
+Lemma closed_under_cons : ∀ h x c n e,
+  isfresh h x → closed_under c h → closed_under c (x↦cl n e::h). 
+intros. unfold closed_under in H0. destruct c. rewrite for_in_iff in H0. unfold
+closed_under. rewrite for_in_iff. intros. apply H0 in H1. destruct H1. destruct
+H1. exists x1, x2. apply clu_cons. assumption. assumption. Qed. 
+
+Lemma isfresh_comm {a} : ∀ (h h':Map nat a) x, isfresh (h ++ h') x → isfresh (h' ++ h) x.
+intros. unfold isfresh. unfold not. intros. rewrite domain_app in H0. rewrite
+in_comm in H0. rewrite <- domain_app in H0. apply H in H0. assumption. Qed.  
+
+Lemma isfresh_cons {a} : ∀ h (x:nat * a) y, isfresh (x::h) y → isfresh h y. 
+intros. unfold isfresh. unfold not. intros. apply H. simpl. auto. Qed. 
+
+Lemma well_formed_heap_insert_inf : ∀ Φ f N e Ψ, 
+  isfresh (Φ ++ Ψ) f →
+  closed_under N Ψ →
+  well_formed_heap (Φ ++ Ψ) →
+  well_formed_heap (Φ ++ f ↦ cl N e :: Ψ).
+intros. induction Φ. simpl. split; auto. destruct a. destruct c. simpl. split.
+inversion H1. unfold isfresh. rewrite domain_app. rewrite in_comm. simpl. unfold
+not. intros. destruct H4. apply H. subst. simpl. auto. apply H2. rewrite
+domain_app. rewrite in_comm. assumption. assert (well_formed_heap (Φ ++ f ↦ cl N
+e :: Ψ)). apply IHΦ. simpl in H. unfold isfresh in H. simpl in H. unfold
+isfresh. unfold not. intros. apply H. auto. inversion H1. destruct H3. auto.
+split; auto. apply closed_under_comm. rewrite unique_domain_app. apply
+well_formed_heap_has_unique_domain. assumption. simpl. apply closed_under_cons.
+simpl in H. apply isfresh_comm. apply isfresh_cons in H. assumption. simpl in
+H1. destruct H1. destruct H3. apply closed_under_comm. apply
+well_formed_heap_has_unique_domain. assumption. assumption. Qed. 
 
 Theorem well_formed_step : ∀ c v, well_formed c → c ⇓ v → well_formed v.
 intros. induction H0. 
@@ -302,88 +437,12 @@ intros. induction H0.
   unfold isfresh in x2. unfold isfresh. unfold not.  intros. apply x2.  rewrite
   domain_app. rewrite in_app_iff. auto. assumption.  clear IHstep2. clear H.
   apply well_formed_heap_has_unique_domain in H1. clear H0_0. rewrite for_in_iff
-  in H2. destruct H0. clear H. apply clu_monotonic in H0_; auto. Focus 2.
-  specialize induction Ψ.  
-  { simpl. split. assumption. split. rewrite for_in_iff. intros. specialize (H2
-    x0 H). destruct H2. destruct H0. exists x1. replace Φ' with ([] ++ Φ') by
-    reflexivity. eapply clu_monotonic. apply H1. simpl in H0. apply H0. apply H0_.
-    inversion IHstep1. assumption. }
-  { inversion IHstep1. destruct a. destruct c. destruct H0. destruct H3. 
-    apply (conj H) in H4. assert (well_formed (⟨Φ' & Ψ⟩close (:λB)
-    ne)). apply H4. apply IHΨ in H5. simpl. split. inversion H1. subst. unfold
-    isfresh. rewrite domain_app. rewrite in_app_iff. rewrite or_comm. rewrite <-
-    in_app_iff. simpl. unfold not. intros. destruct H6. subst.
-    simpl in x. apply x. simpl. auto. rewrite in_comm in H6. rewrite <-
-    domain_app in H6. apply H0 in H6. assumption. split. apply
-    closed_under_comm. simpl. apply ucons. unfold isfresh in x. simpl in x.
-    unfold not. intros. apply x.  apply or_intror. rewrite domain_app. rewrite
-    in_comm. rewrite <- domain_app.  assumption. rewrite unique_domain_app.
-    destruct H4. apply
-    well_formed_heap_has_unique_domain in H6. assumption. simpl. destruct c.
-    simpl. rewrite for_in_iff. intros. simpl in *. rewrite for_in_iff in H3.
-    specialize (H3 x0 H6). destruct H3. destruct H3. exists x1, x2. apply
-    clu_cons. unfold isfresh. clear - x. unfold isfresh in x.
-    simpl in x. unfold not. intros. apply x. apply or_intror. rewrite domain_app. rewrite
-    in_comm. rewrite <- domain_app. assumption. destruct H4. clear - H3 H7.
-    apply well_formed_heap_has_unique_domain in H7. rewrite clu_app.
-    assumption. rewrite unique_domain_app. assumption. assumption. 
-    simpl in H1. inversion H1. subst. assumption. unfold isfresh. unfold not.
-    intros. apply x. simpl. auto. assumption. 
-    apply well_formed_heap_has_unique_domain. assumption. assumption. impl in H0. inversion H0. rewrite domain_app. rewrite in_comm. rewrite <-
-    domain_app. unfold isfresh in H3. apply H3. unfold not. intros. apply H3.   
-    app hrewrite <- domain_app in H7. rew
-    inversion x. destruct H0. unfold isfresh.
-    unfold not. intros. apply x. rewrite domain_app. apply 
-  }
+  in H2. destruct H0. clear H. destruct IHstep1. clear H. apply
+  well_formed_heap_insert_inf; auto. unfold closed_under. rewrite for_in_iff.
+  intros. apply H2 in H.  destruct H. destruct H. exists x1. eapply
+  clu_monotonic_reachable. apply H1. apply H. apply H0_.  
+Qed. 
 
-  simpl. split. destruct H0. auto. rewrite for_in_iff. split. intros. replace Φ'
-  with ([] ++ Φ') by reflexivity. rewrite for_in_iff in H2. specialize (H2 x
-  H3). destruct H2. exists x0. eapply clu_monotonic. apply
-  well_formed_heap_has_unique_domain in H1. apply H1. destruct H2. apply H2. . .  exists (Φ' = [] ++ Φ') using reflexivity. (apply
-  app_nil_r). rewrite
-  <- H4. apply clu_monotonic. apply app_nil_r.  by (rewrite app_nil_r).  apply clu_monotonic. rewrite for_in_iff in H2. specialize
-  (H2 x H3). destruct H2. destruct H2. destruct H2. apply
-  well_formed_heap_has_unique_domain in H1. apply (clu_monotonic _ _ _ _
-  _ _ _ _ _ H1 H2) in H0_. . 
-  
-  apply well_formed_heap_has_unique_domain in H1. 
-  clear H. 
-  split. apply (clu_monotonic _ _ _ _ _ _ _ _ _ H1) in H0_. clear H H1 H0_
-  H0_0. induction Ψ. simpl. destruct H0. split.
-  auto. split. auto. rewrite for_in_iff. rewrite for_in_iff in H2. split. . apply closed_under_weaken. clear IHstep1. induction Ψ. simpl in *. split. destruct H0.
-  auto. auto. 
-  destruct IHstep2. destruct IHstep1. split. 
-  util.remove. 
-  apply in_map with (f:=Peano.pred) in H2 . specialize (H (S x)).   
-  simpl in H. rewrite forevery_map in H. destruct H1. simpl. simpl in H. rewrite forevery_map
-  in H. induction (fvs B).  simpl.  auto. destruct a. simpl in H. apply IHl in
-  H. simpl. split; try assumption.  unfold lookup. simpl. rewrite <-
-  beq_nat_refl. exists f, (close N e). split; auto. simpl. simpl in H. destruct
-  H. split; try (apply IHl; assumption). unfold compose in H. simpl in H.
-  unfold lookup. simpl. rewrite <- beq_nat_refl.  destruct H. destruct H. exists
-  x , x0. destruct H. split; auto.  destruct H0. apply clu_cons; assumption.
-  unfold well_formed_heap. simpl. split. apply forevery_impl with (p:=(λ x :
-  nat, ∃ (e' : nat) (c' : closure),
-        clu x e Φ = Some (e' ↦ c') ∧ In e' (domain Φ))). 
-intros. destruct H3.
-destruct H3. destruct H3.  apply (clu_monotonic Φ Ψ a e (close M e)
-(close (lam B) ne) x x0) in H3. destruct H3. exists x, x1. split. destruct H0. apply
-clu_cons.  assumption. assumption. apply or_intror. apply monotonic_heap
-in H0_. simpl in H0_. rewrite <- subset_eq in H0_. apply H0_ in H4.
-assumption. assumption. assumption. inversion IHstep1. destruct H4. unfold
-well_formed_heap in H4. apply forevery_impl with (p:= (λ x : nat * cell,
-        let (_, c0) := x in match c0 with
-                            | {c, _} => closed_under c Ψ
-                            end)). 
-intros. destruct a. destruct c. unfold closed_under. destruct c. unfold
-closed_under in H6. apply forevery_impl with (p:=(λ x : nat,
-        ∃ (e' : nat) (c' : closure),
-        clu x clos_env0 Ψ = Some (e' ↦ c') ∧ In e' (domain Ψ))).
-intros. destruct H7. destruct H7. destruct H7. exists x, x0. split. destruct H0. apply
-clu_cons; assumption. simpl. auto. assumption. assumption. apply ucons. simpl.
-destruct H0.  assumption. destruct IHstep1. destruct H4. unfold domain in H5.
-assumption. Qed. 
-    
-Lemma values_only : ∀ c e M Ψ, c ⇓ ⟨Ψ⟩close M e → value M.
+Lemma values_only : ∀ c e M Φ Ψ, c ⇓ ⟨Ψ & Φ⟩close M e → value M.
 intros. inversion H; simpl; constructor. Qed.
 
