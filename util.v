@@ -9,6 +9,7 @@ Require Export Unicode.Utf8.
 Require Import Compare_dec.
 Require Export set.
 Require Export JRWTactics.
+Import ListNotations. 
 
 Definition Map a b := list (a * b).
 
@@ -86,6 +87,21 @@ Fixpoint forevery {a} (l:list a) (p : a → Prop) : Prop := match l with
   | nil => True
   end.
 
+Lemma forevery_in {A} : ∀ l p, forevery l p → ∀ x:A, In x l → p x.
+induction l; intros. 
+- inversion H0. 
+- simpl in H. destruct H. inversion H0. subst. assumption. apply IHl;
+  assumption. Qed. 
+
+Lemma in_forevery {A} : ∀ l (p:A→Prop), (∀ x:A, In x l → p x) → forevery l p. 
+induction l; intros. 
+- simpl. auto. 
+- simpl. split. simpl in H. apply H. auto. apply IHl. intros. apply H. simpl.
+  auto. Qed. 
+
+Lemma for_in_iff {A} : ∀ l p, forevery l p ↔ (∀ x :A, In x l → p x). 
+intros. split. apply forevery_in. apply in_forevery. Qed. 
+
 Inductive related_lists {a b} (r : a → b → Prop) : list a → list b → Prop :=
   | rel_nil : related_lists r nil nil
   | rel_cons : ∀ x xs y ys, r x y → related_lists r xs ys → related_lists r (x::xs) (y::ys).
@@ -128,6 +144,12 @@ intros. induction xs. crush. crush. Qed.
 Lemma domain_inf {a b} : ∀ xs (y:a) (m m':b) ys, domain (xs ++ (y,m) :: ys) = 
                                    domain (xs ++ (y,m') :: ys).
 intros. unfold domain. rewrite map_app. simpl. rewrite map_app. simpl.
+reflexivity. Qed.                                    
+
+Lemma domain_inf' {a b} : ∀ xs zs (y:a) (m m':b) ys, domain (xs ++ zs ++ (y,m) :: ys) = 
+                                   domain (xs ++ zs ++ (y,m') :: ys).
+intros. unfold domain. rewrite map_app. assert (di:=@domain_inf a). unfold
+domain in di at 1. rewrite di with (m':=m'). unfold domain. rewrite <- map_app.
 reflexivity. Qed.                                    
 
 Lemma in_inf {a} : ∀ (x:a) xs ys, In x (xs ++ x :: ys).
@@ -253,6 +275,9 @@ intros. inversion H. destruct H0. symmetry. assumption. inversion H0. Qed.
 Lemma subset_cons {A} : forall (x : A) a l, subset a l -> subset a (x::l). intros.
 induction a. auto. inversion H. split. apply in_cons. assumption. 
 apply IHa in H1. assumption. Qed.  
+
+Lemma subset_app_weaken {A} : ∀ xs ys zs : list A, xs ⊆ ys → xs ⊆ (zs ++ ys). 
+induction zs. auto. intros. simpl. apply subset_cons. apply IHzs. auto. Qed. 
 
 Lemma cons_subset {A} : forall (x: A) xs ys, subset xs ys -> subset (x::xs) (x::ys).
 intros. unfold subset. simpl. split. left. reflexivity. apply subset_cons.
@@ -469,7 +494,10 @@ H5. split; auto. Qed.
 
 Lemma unique_domain_app {A} : ∀ (h h':Map nat A), unique (domain (h ++ h')) ↔
 unique (domain (h' ++ h)). intros. unfold domain. rewrite map_app. rewrite
-map_app. split; intros; apply util.unique_app; assumption. Qed.
+map_app. split; intros; apply unique_app; assumption. Qed.
+
+Lemma domain_app {A} : ∀ (h h':Map nat A), domain (h ++ h') = domain h ++ domain
+h'. intros. unfold domain. rewrite map_app. reflexivity. Qed. 
   
 Lemma unique_domain_lookup {b} : ∀ xs k (v:b), unique (domain xs) → 
   (∃ ys zs, xs = ys++(k,v)::zs) → lookup k xs = Some v.
