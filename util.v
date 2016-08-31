@@ -102,9 +102,9 @@ induction l; intros.
 Lemma for_in_iff {A} : ∀ l p, forevery l p ↔ (∀ x :A, In x l → p x). 
 intros. split. apply forevery_in. apply in_forevery. Qed. 
 
-Inductive related_lists {a b} (r : a → b → Prop) : list a → list b → Prop :=
+Inductive related_lists {a b} (r : a → b → list a → list b → Prop) : list a → list b → Prop :=
   | rel_nil : related_lists r nil nil
-  | rel_cons : ∀ x xs y ys, r x y → related_lists r xs ys → related_lists r (x::xs) (y::ys).
+  | rel_cons : ∀ x xs y ys, r x y xs ys → related_lists r xs ys → related_lists r (x::xs) (y::ys).
 
 Lemma forevery_map {A B} : ∀ (f:A→B) xs p, forevery (map f xs) p = forevery xs (compose p f).
 intros. induction xs. simpl. auto. simpl. f_equal. assumption. Qed.
