@@ -179,19 +179,10 @@ Lemma closed_under_weaken : ∀ h h' c,
   closed_under c (h' ++ h).  intros. induction h'. 
 - auto. 
 - destruct a. simpl. unfold closed_under. destruct c.  simpl in *. rewrite
-  for_in_iff. rewrite for_in_iff in H0. intros. assert (H1':=H1). apply H0 in
-  H1. destruct H1.  destruct H1. exists x0, x1. destruct c0. apply clu_cons.
-  rewrite unique_domain_app in H. simpl in H. inversion H. subst. assumption.
-  rewrite for_in_iff in IHh'.  rewrite unique_domain_app in H. inversion H.
-  subst.  rewrite unique_domain_app in H5; auto. destruct IHh' with (x:=x).
-  assumption. assumption. destruct H2. . apply IHh'. rewrite clu_app. apply IHh' with (x:=x) in H5. rewrite
-  refine (forevery_impl _ _ _ _ H0).  intros. destruct H1. destruct H1.
-  destruct H1. exists x, x0. rewrite domain_app
-in H. apply unique_app in H. simpl in H. inversion H. subst. destruct c0.
-apply (clu_cons (x ↦ x0)).  unfold isfresh. rewrite domain_app. assumption. 
-induction h'. apply clu_under_weaken. rewrite domain_app. apply
-unique_app. assumption. rewrite domain_app. rewrite
-in_app_iff. apply or_intror. assumption. Qed.
+  for_in_iff. rewrite for_in_iff in H0. rewrite unique_domain_app in H.
+  inversion H. subst. rewrite unique_domain_app in H4. apply IHh' in H4. rewrite
+  for_in_iff in H4. intros. specialize (H4 x H1). destruct H4. destruct H2.
+  exists x0, x1. destruct c0. apply clu_cons. assumption. assumption. Qed. 
 
 Lemma unique_weaken_app {A} : ∀ h h' : list A, unique (h ++ h') → unique h'. 
 intros. induction h. auto. inversion H. auto. Qed. 
@@ -283,6 +274,17 @@ intros. induce H1.
   assumption. unfold isfresh.  rewrite domain_app. assumption. inversion H1_.
   subst. rewrite domain_app.  apply unique_app. assumption. Qed. 
 
+Lemma closed_under_comm : ∀ h h' c , 
+  unique (domain (h ++ h')) →
+  closed_under c (h ++ h') → 
+  closed_under c (h' ++ h). 
+intros. destruct c. simpl in *. rewrite for_in_iff. rewrite for_in_iff in H0.
+intros. specialize (H0 x H1). rewrite clu_app in H0; auto. Qed.
+
+Lemma in_comm {a} : ∀ l l' (x:a) , In x (l ++ l') <-> In x (l' ++ l).
+split; intros; rewrite in_app_iff; rewrite or_comm; rewrite <- in_app_iff;
+assumption. Qed.
+
 Theorem well_formed_step : ∀ c v, well_formed c → c ⇓ v → well_formed v.
 intros. induction H0. 
 - apply well_formed_inf in H. apply IHstep in H.  apply well_formed_inf' in H.
@@ -295,12 +297,51 @@ intros. induction H0.
   destruct x. unfold clu. unfold lookup. simpl. rewrite <- beq_nat_refl.  exists
   f, (close N e). split; auto. specialize (H x). destruct H. assert (x =
   Peano.pred (S x)). auto. rewrite H.  apply in_map. rewrite remove_not_in.
-  apply H2. auto. destruct H. destruct H. unfold clu. unfold lookup. simpl.
-  rewrite <- beq_nat_refl. unfold clu in H. exists x0, x1. split; auto. apply
-  clu_cons. destruct H0. unfold isfresh in x2. unfold isfresh. unfold not.
-  intros. apply x2. rewrite domain_app. rewrite in_app_iff. auto. assumption.
-  clear IHstep2. induction Ψ. simpl. split. destruct H0. auto. rewrite
-  for_in_iff. split. intros. rewrite for_in_iff in H2. specialize
+  apply H2. auto. destruct H. unfold clu. unfold lookup. simpl.  rewrite <-
+  beq_nat_refl. unfold clu in H. exists x0, x1. apply clu_cons. destruct H0.
+  unfold isfresh in x2. unfold isfresh. unfold not.  intros. apply x2.  rewrite
+  domain_app. rewrite in_app_iff. auto. assumption.  clear IHstep2. clear H.
+  apply well_formed_heap_has_unique_domain in H1. clear H0_0. rewrite for_in_iff
+  in H2. destruct H0. clear H. apply clu_monotonic in H0_; auto. Focus 2.
+  specialize induction Ψ.  
+  { simpl. split. assumption. split. rewrite for_in_iff. intros. specialize (H2
+    x0 H). destruct H2. destruct H0. exists x1. replace Φ' with ([] ++ Φ') by
+    reflexivity. eapply clu_monotonic. apply H1. simpl in H0. apply H0. apply H0_.
+    inversion IHstep1. assumption. }
+  { inversion IHstep1. destruct a. destruct c. destruct H0. destruct H3. 
+    apply (conj H) in H4. assert (well_formed (⟨Φ' & Ψ⟩close (:λB)
+    ne)). apply H4. apply IHΨ in H5. simpl. split. inversion H1. subst. unfold
+    isfresh. rewrite domain_app. rewrite in_app_iff. rewrite or_comm. rewrite <-
+    in_app_iff. simpl. unfold not. intros. destruct H6. subst.
+    simpl in x. apply x. simpl. auto. rewrite in_comm in H6. rewrite <-
+    domain_app in H6. apply H0 in H6. assumption. split. apply
+    closed_under_comm. simpl. apply ucons. unfold isfresh in x. simpl in x.
+    unfold not. intros. apply x.  apply or_intror. rewrite domain_app. rewrite
+    in_comm. rewrite <- domain_app.  assumption. rewrite unique_domain_app.
+    destruct H4. apply
+    well_formed_heap_has_unique_domain in H6. assumption. simpl. destruct c.
+    simpl. rewrite for_in_iff. intros. simpl in *. rewrite for_in_iff in H3.
+    specialize (H3 x0 H6). destruct H3. destruct H3. exists x1, x2. apply
+    clu_cons. unfold isfresh. clear - x. unfold isfresh in x.
+    simpl in x. unfold not. intros. apply x. apply or_intror. rewrite domain_app. rewrite
+    in_comm. rewrite <- domain_app. assumption. destruct H4. clear - H3 H7.
+    apply well_formed_heap_has_unique_domain in H7. rewrite clu_app.
+    assumption. rewrite unique_domain_app. assumption. assumption. 
+    simpl in H1. inversion H1. subst. assumption. unfold isfresh. unfold not.
+    intros. apply x. simpl. auto. assumption. 
+    apply well_formed_heap_has_unique_domain. assumption. assumption. impl in H0. inversion H0. rewrite domain_app. rewrite in_comm. rewrite <-
+    domain_app. unfold isfresh in H3. apply H3. unfold not. intros. apply H3.   
+    app hrewrite <- domain_app in H7. rew
+    inversion x. destruct H0. unfold isfresh.
+    unfold not. intros. apply x. rewrite domain_app. apply 
+  }
+
+  simpl. split. destruct H0. auto. rewrite for_in_iff. split. intros. replace Φ'
+  with ([] ++ Φ') by reflexivity. rewrite for_in_iff in H2. specialize (H2 x
+  H3). destruct H2. exists x0. eapply clu_monotonic. apply
+  well_formed_heap_has_unique_domain in H1. apply H1. destruct H2. apply H2. . .  exists (Φ' = [] ++ Φ') using reflexivity. (apply
+  app_nil_r). rewrite
+  <- H4. apply clu_monotonic. apply app_nil_r.  by (rewrite app_nil_r).  apply clu_monotonic. rewrite for_in_iff in H2. specialize
   (H2 x H3). destruct H2. destruct H2. destruct H2. apply
   well_formed_heap_has_unique_domain in H1. apply (clu_monotonic _ _ _ _
   _ _ _ _ _ H1 H2) in H0_. . 
