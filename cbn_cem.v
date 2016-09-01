@@ -118,6 +118,7 @@ Definition eq_confs (c: cem.configuration) (c':cbn.configuration) : Prop :=
   match c, c' with
   | cem.conf h ur cl, cbn.st h' ur' e' => eq_terms e' (cem.st_clos c) (cem.reachable c) 
                                         ∧ eq_heaps (ur ++ h) (ur' ++ h')
+                                        /\ eq_heaps h h'.
   end.
 
 Fixpoint depth_env (xs : list nat) (y : nat) := match xs with 
@@ -293,37 +294,68 @@ intros. induction xs. auto. apply or_intror. destruct IHxs. subst. exists a,
 nil. auto. destruct H. destruct H. rewrite H. exists x, (a::x0). reflexivity.
 Qed. 
 
-(*
+Lemma related_not_cons {a b} : ∀ r xs (ys:list b) (x:a), 
+  related_lists r xs ys →
+  not (related_lists r (x::xs) ys). 
+intros. prep_induction H. induction H; intros. unfold not. intros. inversion H.
+unfold not. intros. inversion H1. subst. apply IHrelated_lists in H7.
+assumption.  Qed.
+
+Inductive eq_length {a b} : list a → list b → Prop :=
+  | el_nil : eq_length [] []
+  | el_cons : ∀ xs ys x y, eq_length xs ys → eq_length (x::xs) (y::ys).
+
+Lemma eleq {a b} : ∀ (xs : list a) (ys : list b), eq_length xs ys <-> length xs = length ys.
+split; intros. induction H. auto. simpl; rewrite IHeq_length; reflexivity.
+prep_induction xs. induction xs; intros. inversion H. destruct ys. constructor.
+inversion H1.  prep_induction ys. induction ys; intros. inversion H. simpl in H.
+inversion H. apply IHxs in H1. constructor. assumption. Qed.
+
+Lemma related_lists_eq_length {a b} : ∀ r (xs:list a) (ys:list b), 
+  related_lists r xs ys → 
+  eq_length xs ys. 
+intros. induction H. constructor. constructor. assumption. Qed. 
+
+Lemma eq_length_app1 {a b} : ∀ (xs xs':list a) (ys ys':list b),
+  eq_length xs ys →
+  eq_length (xs ++ xs') (ys ++ ys') → 
+  eq_length xs' ys'.
+intros. induction H. assumption. inversion H0. subst. apply IHeq_length.
+assumption. Qed. 
+
+Lemma eq_length_comm {a} : ∀ (xs xs':list a), 
+  eq_length (xs ++ xs') (xs' ++ xs). 
+intros. rewrite eleq. rewrite app_length. rewrite Plus.plus_comm. rewrite <-
+app_length. reflexivity. Qed. 
+
+Lemma eq_length_app2 {a b} : ∀ (xs xs':list a) (ys ys':list b),
+  eq_length xs' ys' →
+  eq_length (xs ++ xs') (ys ++ ys') → 
+  eq_length xs ys.
+intros. rewrite eleq in H0. rewrite app_length in H0. rewrite Plus.plus_comm in
+H0. rewrite app_length in H0. rewrite <- app_length in H0. rewrite
+Plus.plus_comm in H0. rewrite <- app_length in H0. rewrite <- eleq in H0. apply
+eq_length_app1 in H0; auto. Qed.   
+
 Lemma related_lists_inf {a b} : ∀ (x:a) xs xs' (y:b) ys ys' r, 
-  related_lists r xs' ys' →
+  eq_length xs ys →
   related_lists r (xs ++ x :: xs') (ys ++ y :: ys') →
   r x y xs' ys'. 
-intros. prep_induction H0. induction H0; intros; subst. symmetry in H3. apply
-app_eq_nil in H3. destruct H3. inversion H1. destruct ys0. destruct xs0.
-inversion H3. inversion H2. subst. assumption. inversion H2. subst. 
-inversion H3. subst. inversion H0. symmetry in H5. apply app_eq_nil in H5.
-destruct H5. inversion H6. clear H3.  clear H2.  subst. inversion H2. inversion H3. destruct H2. inversion H2eapply IHrelated_lists; try
-reflexivity. assumption. destruct ys0. inversion H3. subst. destruct xs0.
-inversion H2. subst. 
-inversion  eq_rewith
-(xs:=x::xs). apply app_nil_r in H3. apply related_lists_inj_tail in
-H0. assumption. replace (xs0 ++ x0 :: x :: xs) ((xs0 ++ [x0]) ++ x :: xs).  constructor. apply rela
+intros. prep_induction H. induction H; intros. inversion H0. subst. assumption.
+simpl in H0. inversion H0. subst. apply IHeq_length in H6. assumption. Qed. 
 
-Lemma related_lists_inf {a b} : ∀ (r : a → b → list a → list b → Prop) xs xs' ys ys' x y,
-  related_lists r (xs ++ x :: xs') (ys ++ y :: ys') →
-  (¬ ∃ y t l, In y ys ∧ r x y t l) ∧ (¬ ∃ y t l, In y ys' ∧ r x y t l) →
-  r x y xs' ys'.
-intros. assert (In x (xs ++ x :: xs')). apply in_inf. apply (related_lists_in _
-_ _ _ H) in H1. destruct H1. destruct H1. destruct H0. destruct H1. destruct H1. apply in_app_or in H1.
-destruct H1. destruct H0. exists x0, x1, x2. split; auto. inversion H1. subst. destruct H2. exists
-x0, x1, x2. inversion H1. subst. specialize (H0 (ex_intro _ x0 (conj H1 H2))).  inversion H0.
-simpl in H1. destruct H1. subst. assumption. specialize (H3 (ex_intro _ x0 (conj
-H1 H2))). inversion H3. Qed. 
+Lemma related_lists_inf' {a b} : ∀ (x:a) xs xs' (y:b) ys ys' r, 
+  eq_length xs' ys' →
+  related_lists r ((xs ++ [x]) ++ xs') ((ys ++ [y]) ++ ys') →
+  r x y xs' ys'. 
+intros. rewrite <- app_assoc in H0. rewrite <- app_assoc in H0. assert
+(H0':=H0). apply related_lists_eq_length in H0. apply eq_length_app2 in H0.
+eapply related_lists_inf. apply H0. apply H0'. constructor. assumption. Qed.
 
 Lemma eq_terms_cons : ∀ xs c c' f d t, isfresh xs f → 
-  conftolg (cem.conf xs c) d = Some t →
-  conftolg (cem.conf ((f, c')::xs) c) d = Some t. 
-destruct c. generalize dependent xs. generalize dependent clos_env. induction
+  conftolg c xs d = Some t →
+  conftolg c ((f, c')::xs) d = Some t. 
+intros. destruct c. generalize dependent d. generalize dependent t. generalize dependent xs. generalize dependent clos_env. induction
 clos_tm; intros. simpl. simpl in H0. destruct (gt_dec d n). assumption.
 destruct (cem.clu (n-d) clos_env xs) eqn:clue. rewrite <- H0. f_equal. destruct
 c'. apply cem.clu_cons; assumption. inversion H0. simpl. simpl in H0. simpl in
@@ -333,8 +365,8 @@ IHclos_tm. destruct ((fix cte' (t0 : lgexpr) : option lgexpr :=
         | lvar v => Some (lvar v)
         | lam b => lam <$> cte' b
         | app m n => app <$> cte' m <*> cte' n
-        end) (cte clos_tm (S d))) eqn:bod. specialize (IHclos_tm clos_env xs c'
-f (S d) l H bod). rewrite IHclos_tm. assumption. inversion H0. simpl. simpl in
+        end) (cte clos_tm (S d))) eqn:bod. specialize (IHclos_tm clos_env xs 
+H l (S d) bod). rewrite IHclos_tm. assumption. inversion H0. simpl. simpl in
 H0. 
 destruct ((fix cte' (t0 : lgexpr) : option lgexpr :=
         match t0 with
@@ -350,18 +382,17 @@ destruct ((fix cte' (t0 : lgexpr) : option lgexpr :=
         | lam b => lam <$> cte' b
         | app m n => app <$> cte' m <*> cte' n
         end) (cte clos_tm2 d)) eqn:t2e. 
-specialize (IHclos_tm1 clos_env xs c' f d l H t1e). 
-specialize (IHclos_tm2 clos_env xs c' f d l0 H t2e). simpl in IHclos_tm1. simpl
+specialize (IHclos_tm1 clos_env xs H l d t1e). 
+specialize (IHclos_tm2 clos_env xs H l0 d t2e). simpl in IHclos_tm1. simpl
 in IHclos_tm2. rewrite IHclos_tm1. rewrite IHclos_tm2. assumption. inversion H0.
 inversion H0. Qed.  
-*)
 
 Lemma eq_confs_inf : ∀ x x' l m c e y y' m' c', 
   eq_confs (cem.conf  y' (x' ++ [(l, cem.cl c e)]) c')
            (cbn.st y (x ++ [(l, m)]) m')
 → eq_terms m c y'.
 intros. destruct H. destruct H0. destruct H1. unfold eq_heaps in H2. apply
-related_lists_inf in H2. destruct H2. assumption. unfold not. split; intros;
+related_lists_inf' in H2. destruct H2. assumption. unfold not. split; intros;
 destruct H3; destruct H3; destruct x0; destruct H4; subst; destruct H0;
 destruct H4; unfold domain in H4; rewrite map_app in H4; simpl in H4; apply
 unique_app_comm in H4; inversion H4; apply not_in_app in H9; destruct H9; apply
