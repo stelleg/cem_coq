@@ -6,7 +6,8 @@ preserved through execution.
 
 Existing work has focused on verifying \emph{strict}
 languages~\cite{chlipala2007certified, leroy2012compcert}. This paper presents
-the first machine-verified compiler of a non-strict language. Non-strict languages evaluate bound variables on-demand, instead of precomputing their
+the first machine-verified compiler of a non-strict language. Non-strict
+languages evaluate bound variables on-demand, instead of precomputing their
 value. It is generally accepted that the mapping of a non-strict language to
 hardware is harder to reason about.  Indeed, the vast majority of languages
 have strict semantics by default largely for this reason. Reasoning formally
@@ -18,7 +19,7 @@ to be particularly challenging: one must reason about updating expressions with
 values in a heap. 
 
 Our approach is enabled by a recently developed abstract machine, the Cactus
-Environment Machine $\mathcal{CE}$ \cite{?}. $\mathcal{CE}$ uses a shared
+Environment Machine $\mathcal{CE}$~\cite{?}. $\mathcal{CE}$ uses a shared
 environment to share results between instances of a variable. It can be compiled
 to machine code very succinctly, reducing the load for formal reasoning about
 the compiler greatly. It is likely we would not have succeeded in (or even
@@ -77,11 +78,24 @@ related by the bisimulation relation.
 \end{corollary}
 
 This corollary says that we get the correct value when we execute the assembly
-program on the machine. This is similar, though slightly stronger, to the result
-rom \cite{chlipala2007certified}. Chlipala shows the first half of the
-\emph{iff}, though the second half is implied by the fact that he's working with
-a total language.
+program on the instruction machine. This is similar, though slightly stronger,
+to the result rom~\cite{chlipala2007certified}. Chlipala shows the first half of
+the \emph{iff}, though the second half is implied by the fact that he's working
+with a total language. Note that our bisimulation if significantly stronger than
+this type of result, which only considers the input and output: our proof of
+bisulation proves an equivalence of the execution paths.
 
 \subsection{Outline}
-We structure the paper as follows: for each step in the compiler, there are at
-least one 
+We structure the paper as follows: for each static semantic in the compiler,
+there are at least one dynamic semantics required for the proofs. For each
+adjacent pair of dynamic semantics, we must prove a bisimulation relation.
+In Section 1 we cover call by need semantics, including a correction to the
+Ariola et. al's presentation`\cite{ariola1995call}. In Section 2 we cover the
+$\mathcal{CE}$ big step semantics and it's lock-step relation to call-by-need.
+In Section 3 we describe the $\mathcal{CE}$ small step semantics and how it
+relates to the big step semantics. We finish the chain in Section 4, describing
+the instruction machine semantics and it's relation to the $\mathcal{CE}$ small
+step semantics. While this compiler is untyped, we use Section 5 to discuss how
+one could incorporate a type system into the compiler. We then discuss threats
+to validity in Section 6 and conclude in Section 7. 
+
