@@ -1,0 +1,69 @@
+\documentclass[preprint]{sigplanconf}
+
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{mathtools}
+\usetikzlibrary{chains,fit,shapes,calc}
+\usepackage{verbatim}
+\usepackage{semantic}
+\usepackage{tabu}
+\usepackage{amsthm}
+\usepackage{mathptmx}
+\usepackage{todonotes}
+\newcommand{\concat}{\ensuremath{+\!\!\!\!+\,}}  
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\begin{document}
+
+\conferenceinfo{PLDI 2017}{} 
+\copyrightyear{2016} 
+\copyrightdata{[to be supplied]} 
+
+\titlebanner{Preprint}        % These are ignored unless
+\preprintfooter{Cactus Environment Machine}   % 'preprint' option specified.
+
+\title{Certifiably Lazy}
+\subtitle{Verified Compilation of Call-by-Need Lambda Calculus}
+
+\authorinfo{George Stelle}
+           {University of New Mexico}
+           {stelleg@cs.unm.edu}
+\authorinfo{Darko Stefanovic}
+           {University of New Mexico}
+           {darko@cs.unm.edu}
+\authorinfo{Stephen L. Olivier}
+           {Sandia National Laboratories}
+           {slolivi@sandia.gov}
+\authorinfo{Stephanie Forrest}
+           {University of New Mexico}
+           {forrest@cs.unm.edu}
+
+\maketitle
+
+\begin{abstract}
+We present a verified compiler that preserves call-by-need semantics when
+compiling lambda calculus into a simple assembly language. We use a recently
+developed abstract machine that implements call-by-need semantics using shared
+environments to implement and reason about the compiler. We show that the
+abstract machine ensures that the compiled assembly code bisimulates Ariola et.
+al's operational semantics. Because call-by-need is an optimization for
+call-by-name, we also show the $\beta$ reduction semantics of call-by-name are
+preserved.
+\end{abstract}
+
+\input{intro}
+
+\section{Acknowledgments}
+Sandia is a multiprogram laboratory operated by Sandia Corporation, a Lockheed Martin Company, for the United States Department of Energy’s National Nuclear Security Administration under contract DE-AC04-94AL85000.
+
+% We recommend abbrvnat bibliography style.
+\bibliographystyle{abbrvnat}
+\bibliography{annotated}
+
+\end{document}

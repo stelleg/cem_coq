@@ -1,0 +1,722 @@
+@inproceedings{olivier2012characterizing,
+  title={Characterizing and mitigating work time inflation in task parallel programs},
+  author={Olivier, Stephen L and de Supinski, Bronis R and Schulz, Martin and Prins, Jan F},
+  booktitle={High Performance Computing, Networking, Storage and Analysis (SC), 2012 International Conference for},
+  pages={1--12},
+  year={2012},
+  organization={IEEE}
+}
+
+@inproceedings{hargrove2006berkeley,
+  title={Berkeley lab checkpoint/restart (blcr) for linux clusters},
+  author={Hargrove, Paul H and Duell, Jason C},
+  booktitle={Journal of Physics: Conference Series},
+  volume={46},
+  number={1},
+  pages={494},
+  year={2006},
+  organization={IOP Publishing}
+}
+
+@article{young1974first,
+  title={A first order approximation to the optimum checkpoint interval},
+  author={Young, John W},
+  journal={Communications of the ACM},
+  volume={17},
+  number={9},
+  pages={530--531},
+  year={1974},
+  publisher={ACM}
+}
+
+@book{koza1994genetic,
+  title={Genetic programming II: automatic discovery of reusable programs},
+  author={Koza, John R},
+  year={1994}
+}
+
+@inproceedings{le2012systematic,
+  title={A systematic study of automated program repair: Fixing 55 out of 105 bugs for \$8 each},
+  author={Le Goues, Claire and Dewey-Vogt, Michael and Forrest, Stephanie and Weimer, Westley},
+  booktitle={Software Engineering (ICSE), 2012 34th International Conference on},
+  pages={3--13},
+  year={2012},
+  organization={IEEE}
+}
+
+@article{milner1978theory,
+  title={A theory of type polymorphism in programming},
+  author={Milner, Robin},
+  journal={Journal of computer and system sciences},
+  volume={17},
+  number={3},
+  pages={348--375},
+  year={1978},
+  publisher={Elsevier}
+}
+
+@inproceedings{lattner2004llvm,
+  title={LLVM: A compilation framework for lifelong program analysis \& transformation},
+  author={Lattner, C. and Adve, V.},
+  booktitle={Code Generation and Optimization, 2004. CGO 2004. International Symposium on},
+  pages={75--86},
+  year={2004},
+  organization={IEEE}
+}
+
+@book{blumofe1995cilk,
+  title={Cilk: An efficient multithreaded runtime system},
+  author={Blumofe, R.D. and Joerg, C.F. and Kuszmaul, B.C. and Leiserson, C.E. and Randall, K.H. and Zhou, Y.},
+  volume={30},
+  number={8},
+  year={1995},
+  publisher={ACM}
+}
+
+
+@article{sankaran2005lam,
+  title={The LAM/MPI checkpoint/restart framework: System-initiated checkpointing},
+  author={Sankaran, S. and Squyres, J.M. and Barrett, B. and Sahay, V. and Lumsdaine, A. and Duell, J. and Hargrove, P. and Roman, E.},
+  journal={International Journal of High Performance Computing Applications},
+  volume={19},
+  number={4},
+  pages={479--493},
+  year={2005},
+  publisher={SAGE Publications}
+}
+
+
+@book{quinn2003parallel,
+  title={Parallel Programming},
+  author={Quinn, M.J.},
+  year={2003},
+  publisher={TMH}
+}
+
+@article{ha2009concurrent,
+  title={A concurrent trace-based just-in-time compiler for single-threaded JavaScript},
+  author={Ha, J. and Haghighat, M.R. and Cong, S. and McKinley, K.S.},
+  journal={PESPMA 2009},
+  pages={47},
+  year={2009}
+}
+
+@inproceedings{gal2006hotpathvm,
+  title={HotpathVM: an effective JIT compiler for resource-constrained devices},
+  author={Gal, A. and Probst, C.W. and Franz, M.},
+  booktitle={Proceedings of the 2nd international conference on Virtual execution environments},
+  pages={144--153},
+  year={2006},
+  organization={ACM}
+}
+
+@article {lkm,
+   author = {Friedman, Daniel and Ghuloum, Abdulaziz and Siek, Jeremy and Winebarger, Onnie},
+   affiliation = {Indiana University Bloomington IN USA},
+   title = {Improving the Lazy {Krivine} Machine},
+   journal = {Higher-Order and Symbolic Computation},
+   publisher = {Springer Netherlands},
+   issn = {1388-3690},
+   keyword = {Computer Science},
+   pages = {271-293},
+   volume = {20},
+   issue = {3},
+   url = {http://dx.doi.org/10.1007/s10990-007-9014-0},
+   note = {10.1007/s10990-007-9014-0},
+   abstract = {Krivine presents the machine, which produces weak head normal form results. Sestoft introduces several call-by-need variants of the machine that implement result sharing via pushing update markers on the stack in a way similar to the TIM and the STG machine. When a sequence of consecutive markers appears on the stack, all but the first cause redundant updates. Improvements related to these sequences have dealt with either the consumption of the markers or the removal of the markers once they appear. Here we present an improvement that eliminates the production of marker sequences of length greater than one. This improvement results in the machine, a more space and time efficient variant of . We then apply the classic optimization of short-circuiting operand variable dereferences to create the call-by-need machine. Finally, we combine the two improvements in the machine. On our benchmarks this machine uses half the stack space, performs one quarter as many updates, and executes between 27% faster and 17% slower than our ℒ variant of Sestoft’s lazy Krivine machine. More interesting is that on one benchmark ℒ, , and consume unbounded space, but consumes constant space. Our comparisons to Sestoft’s Mark 2 machine are not exact, however, since we restrict ourselves to unpreprocessed closed lambda terms. Our variant of his machine does no environment trimming, conversion to deBruijn-style variable access, and does not provide basic constants, data type constructors, or the recursive let . (The Y combinator is used instead.)},
+   year = {2007}
+}
+
+@article{sestoft,
+  title={Deriving a lazy abstract machine},
+  author={Sestoft, P.},
+  journal={Journal of Functional Programming},
+  volume={7},
+  number={3},
+  pages={231--264},
+  year={1997},
+  publisher={Cambridge University Press}
+}
+
+@article{jonesstg,
+  title={Implementing Lazy Functional Languages on Stock Hardware: The
+  Spineless Tagless {G}-machine},
+  author={Peyton Jones, Simon L.},
+  journal={Journal of functional programming},
+  volume={2},
+  number={2},
+  pages={127--202},
+  year={1992},
+  publisher={Cambridge Univ Press}
+}
+
+@inproceedings{launchburynatural,
+  title={A natural semantics for lazy evaluation},
+  author={Launchbury, J.},
+  booktitle={Proceedings of the 20th ACM SIGPLAN-SIGACT symposium on Principles of programming languages},
+  pages={144--154},
+  year={1993},
+  organization={ACM}
+}
+
+@inproceedings{johnsson1984efficient,
+  title={Efficient Compilation of Lazy Evaluation},
+  author={Johnsson, Thomas},
+  booktitle={SIGPLAN Notices},
+  year={1984}
+}
+
+@inproceedings{chitil1997common,
+  title={Common subexpression elimination in a lazy functional language},
+  author={Chitil, O.},
+  booktitle={Draft Proceedings of the 9th International Workshop on Implementation of Functional Languages},
+  pages={501--516},
+  year={1997}
+}
+
+@inproceedings{augustsson1989parallel,
+  title={Parallel graph reduction with the (v, G)-machine},
+  author={Augustsson, L. and Johnsson, T.},
+  booktitle={Proceedings of the fourth international conference on
+   Functional programming languages and computer architecture},
+  pages={202--213},
+  year={1989},
+  organization={ACM}
+}
+
+@inproceedings{bolingbroke2010supercompilation,
+  title={Supercompilation by evaluation},
+  author={Bolingbroke, M. and Peyton Jones, S.},
+  booktitle={Proceedings of the third ACM Haskell symposium on Haskell},
+  pages={135--146},
+  year={2010},
+  organization={ACM}
+}
+
+@article{krivine2007call,
+  title={A Call-by-Name Lambda-Calculus Machine},
+  author={Krivine, J.L.},
+  journal={Higher-Order and Symbolic Computation},
+  volume={20},
+  number={3},
+  pages={199--207},
+  year={2007},
+  publisher={Springer}
+}
+
+@article{hughes1989functional,
+  title={Why functional programming matters},
+  author={Hughes, J.},
+  journal={The computer journal},
+  volume={32},
+  number={2},
+  pages={98--107},
+  year={1989},
+  publisher={Br Computer Soc}
+}
+
+@article{weimer2010automatic,
+  title={Automatic program repair with evolutionary computation},
+  author={Weimer, W. and Forrest, S. and Le Goues, C. and Nguyen, T.V.},
+  journal={Communications of the ACM},
+  volume={53},
+  number={5},
+  pages={109--116},
+  year={2010},
+  publisher={ACM}
+}
+
+@article{mitchell2008supercompiler,
+  title={A supercompiler for core Haskell},
+  author={Mitchell, N. and Runciman, C.},
+  journal={Implementation and Application of Functional Languages},
+  pages={147--164},
+  year={2008},
+  publisher={Springer}
+}
+
+@article{mycroft2000statically,
+  title={A statically allocated parallel functional language},
+  author={Mycroft, A. and Sharp, R.},
+  journal={Automata, Languages and Programming},
+  pages={37--48},
+  year={2000},
+  publisher={Springer}
+}
+
+@inproceedings{chakravarty2007data,
+  title={Data Parallel Haskell: a status report},
+  author={Chakravarty, M.M.T. and Leshchinskiy, R. and Jones, S.P. and Keller, G. and Marlow, S.},
+  booktitle={Proceedings of the 2007 workshop on Declarative aspects of multicore programming},
+  pages={10--18},
+  year={2007},
+  organization={ACM}
+}
+
+@inproceedings{trinder1996gum,
+  title={GUM: a portable parallel implementation of Haskell},
+  author={Trinder, P.W. and Hammond, K. and Mattson Jr, J.S. and Partridge, A.S. and Peyton Jones, SL},
+  booktitle={ACM SIGPLAN Notices},
+  volume={31},
+  number={5},
+  pages={79--88},
+  year={1996},
+  organization={ACM}
+}
+
+@INPROCEEDINGS{Marlow00writinghigh-performance,
+  author = {Simon Marlow},
+  title = {Writing High-Performance Server Applications in Haskell Case Study: A Haskell Web Server},
+  booktitle = {In Haskell Workshop},
+  year = {2000}
+}
+
+@article{adl1998fast,
+  title={Fast, effective code generation in a just-in-time Java compiler},
+  author={Adl-Tabatabai, A.R. and Cierniak, M. and Lueh, G.Y. and Parikh, V.M. and Stichnoth, J.M.},
+  journal={ACM SIGPlAN Notices},
+  volume={33},
+  pages={280--290},
+  year={1998},
+  publisher={ASSOCIATION FOR COMPUTING MACHINERY-SPECIAL INTEREST GROUP ON}
+}
+
+@inproceedings{schroeder2007understanding,
+  title={Understanding failures in petascale computers},
+  author={Schroeder, B. and Gibson, G.A.},
+  booktitle={Journal of Physics: Conference Series},
+  volume={78},
+  number={1},
+  pages={012022},
+  year={2007},
+  organization={IOP Publishing}
+}
+@inproceedings{dinan2009scalable,
+  title={Scalable work stealing},
+  author={Dinan, J. and Larkins, D.B. and Sadayappan, P. and Krishnamoorthy, S. and Nieplocha, J.},
+  booktitle={Proceedings of the Conference on High Performance Computing Networking, Storage and Analysis},
+  pages={53},
+  year={2009},
+  organization={ACM}
+}
+
+@inproceedings{randell1975system,
+  title={System structure for software fault tolerance},
+  author={Randell, B.},
+  booktitle={ACM SIGPLAN Notices},
+  volume={10},
+  number={6},
+  pages={437--449},
+  year={1975},
+  organization={ACM}
+}
+@inproceedings{claessen2000quickcheck,
+  title={QuickCheck: a lightweight tool for random testing of Haskell programs},
+  author={Claessen, K. and Hughes, J.},
+  booktitle={Acm sigplan notices},
+  volume={35},
+  number={9},
+  pages={268--279},
+  year={2000},
+  organization={ACM}
+}
+@inproceedings{binard2007abstraction,
+  title={An abstraction-based genetic programming system},
+  author={Binard, F. and Felty, A.},
+  booktitle={Proceedings of the 2007 GECCO conference companion on Genetic and evolutionary computation},
+  pages={2415--2422},
+  year={2007},
+  organization={ACM}
+}
+@unpublished{schulte2012smutationalrobustness,
+  author        = {Eric Schulte and Zachary P. Fry and Ethan Fast and Stephanie Forrest and Westley Weimer},
+  title         = {Software Mutational Robustness: Bridging The Gap Between Mutation Testing and Evolutionary Biology},
+  archivePrefix = {arXiv},
+  eprint        = {1204.4224},
+  primaryClass  = {cs.SE},
+  note          = {http://arxiv.org/abs/1204.4224},
+  month         = {April},
+  year          = 2012
+}
+@article{banker1998software,
+  title={Software development practices, software complexity, and software
+  maintenance performance: A field study},
+  author={Banker, R.D. and Davis, G.B. and Slaughter, S.A.},
+  journal={Management Science},
+  volume={44},
+  number={4},
+  pages={433--450},
+  year={1998},
+  publisher={INFORMS}
+}
+@article{dean2008mapreduce,
+  title={MapReduce: simplified data processing on large clusters},
+  author={Dean, J. and Ghemawat, S.},
+  journal={Communications of the ACM},
+  volume={51},
+  number={1},
+  pages={107--113},
+  year={2008},
+  publisher={ACM}
+}
+@article{el2005high,
+  title={High Performance Parallel Programming with Unified Parallel C (UPC)},
+  author={El-Ghazawi, T. and Seidel, S.},
+  journal={SC05 Tutorial},
+  year={2005}
+}
+@book{engler2001bugs,
+  title={Bugs as deviant behavior: A general approach to inferring errors in systems code},
+  author={Engler, D. and Chen, D.Y. and Hallem, S. and Chou, A. and Chelf, B.},
+  volume={35},
+  number={5},
+  year={2001},
+  publisher={ACM}
+}
+@article{burn1986strictness,
+  title={Strictness analysis for higher-order functions},
+  author={Burn, G.L. and Hankin, C. and Abramsky, S.},
+  journal={Science of Computer Programming},
+  volume={7},
+  pages={249--278},
+  year={1986},
+  publisher={Elsevier}
+}
+@inproceedings{ennals2003optimistic,
+  title={Optimistic evaluation: an adaptive evaluation strategy for non-strict programs},
+  author={Ennals, R. and Jones, S.P.},
+  booktitle={ACM Sigplan Notices},
+  volume={38},
+  number={9},
+  pages={287--298},
+  year={2003},
+  organization={ACM}
+}
+
+@INPROCEEDINGS{Johnsson85lambdalifting,
+    author = {Thomas Johnsson},
+    title = {Lambda Lifting: Transforming Programs to Recursive Equations},
+    booktitle = {},
+    year = {1985},
+    pages = {190--203},
+    publisher = {Springer-Verlag}
+}
+
+@inproceedings{TIM,
+  title={{TIM}: A Simple, Lazy Abstract Machine to Execute Supercombinators},
+  author={Fairbairn, Jon and Wray, Stuart},
+  booktitle={Functional Programming Languages and Computer Architecture},
+  pages={34--45},
+  year={1987},
+  organization={Springer}
+}
+
+@inproceedings{stenstrom1988vlsi,
+  title={VLSI support for a cactus stack oriented memory organization},
+  author={Stenstrom, Per},
+  booktitle={System Sciences, 1988. Vol. I. Architecture Track, Proceedings of the Twenty-First Annual Hawaii International Conference on},
+  volume={1},
+  pages={211--220},
+  year={1988},
+  organization={IEEE}
+}
+
+@inproceedings{ariola1995call,
+  title={A Call-By-Need Lambda Calculus},
+  author={Ariola, Zena M and Maraist, John and Odersky, Martin and Felleisen, Matthias and Wadler, Philip},
+  booktitle={Proceedings of the 22nd ACM SIGPLAN-SIGACT symposium on Principles of programming languages},
+  pages={233--246},
+  year={1995},
+  organization={ACM}
+}
+
+@article{turner1979new,
+  title={A new implementation technique for applicative languages},
+  author={Turner, David A},
+  journal={Software: Practice and Experience},
+  volume={9},
+  number={1},
+  pages={31--49},
+  year={1979},
+  publisher={Wiley Online Library}
+}
+
+@book{peyton1992implementing,
+  title={Implementing Functional Languages},
+  author={Peyton Jones, Simon L and Lester, David R},
+  year={1992},
+  publisher={Prentice-Hall, Inc.}
+}
+
+@article{garcia2009lazy,
+  title={Lazy Evaluation and Delimited Control},
+  author={Sabry, Amr and Lumsdaine, Andrew and Garcia, Ronald},
+  journal={Logical Methods in Computer Science},
+  volume={6},
+  year={2010},
+  publisher={Episciences. org}
+}
+
+@inproceedings{boquist1997grin,
+  title={The {GRIN} Project: A Highly Optimising Back End for Lazy Functional
+  Languages},
+  author={Boquist, Urban and Johnsson, Thomas},
+  booktitle={Implementation of Functional Languages},
+  pages={58--84},
+  year={1997},
+  publisher={Springer}
+}
+
+@article{landin1964mechanical,
+  title={The mechanical evaluation of expressions},
+  author={Landin, Peter J},
+  journal={The Computer Journal},
+  volume={6},
+  number={4},
+  pages={308--320},
+  year={1964},
+  publisher={Br Computer Soc}
+}
+
+@article{diehl2000abstract,
+  title={Abstract machines for programming language implementation},
+  author={Diehl, Stephan and Hartel, Pieter and Sestoft, Peter},
+  journal={Future Generation Computer Systems},
+  volume={16},
+  number={7},
+  pages={739--751},
+  year={2000},
+  publisher={Elsevier}
+}
+
+@book{barendregt1984lambda,
+  title={The Lambda Calculus},
+  author={Barendregt, Hendrik Pieter},
+  volume={3},
+  year={1984},
+  publisher={North-Holland Amsterdam}
+}
+
+@inproceedings{danvy2013synthetic,
+  title={A Synthetic Operational Account of Call-by-Need Evaluation},
+  author={Danvy, Olivier and Zerny, Ian},
+  booktitle={Proceedings of the 15th Symposium on Principles and Practice of Declarative Programming},
+  pages={97--108},
+  year={2013},
+  organization={ACM}
+}
+
+@article{biernacka2007concrete,
+  title={A Concrete Framework for Environment Machines},
+  author={Biernacka, Ma{\l}gorzata and Danvy, Olivier},
+  journal={ACM Transactions on Computational Logic (TOCL)},
+  volume={9},
+  number={1},
+  pages={6},
+  year={2007},
+  publisher={ACM}
+}
+
+@article{curien1991abstract,
+  title={An Abstract Framework for Environment Machines},
+  author={Curien, P-L},
+  journal={Theoretical Computer Science},
+  volume={82},
+  number={2},
+  pages={389--402},
+  year={1991},
+  publisher={Elsevier}
+}
+
+@article{danvy2012inter,
+  title={On Inter-Deriving Small-Step and Big-Step Semantics: A Case Study for
+  Storeless Call-by-Need Evaluation},
+  author={Danvy, Olivier and Millikin, Kevin and Munk, Johan and Zerny, Ian},
+  journal={Theoretical Computer Science},
+  volume={435},
+  pages={21--42},
+  year={2012},
+  publisher={Elsevier}
+}
+ 
+@inproceedings{shao1994space,
+  title={Space-efficient closure representations},
+  author={Shao, Zhong and Appel, Andrew W},
+  booktitle={Proceedings of the 1994 ACM Conference on Lisp and Functioanl
+  Programming},
+  year={1994},
+  organization={ACM}
+}
+
+@book{appel1988optimizing,
+  title={Optimizing closure environment representations},
+  author={Appel, Andrew W and Jim, Trevor},
+  year={1988},
+  publisher={Princeton University, Department of Computer Science}
+}
+
+@book{appel2006compiling,
+  title={Compiling with continuations},
+  author={Appel, Andrew W},
+  year={2006},
+  publisher={Cambridge University Press}
+}
+
+@article{rozas1992taming,
+  title={Taming the {Y} operator},
+  author={Rozas, Guillermo Juan},
+  journal={ACM SIGPLAN Lisp Pointers},
+  number={1},
+  pages={226--234},
+  year={1992},
+  publisher={ACM}
+}
+
+@inproceedings{terei2010llvm,
+  title={An {LLVM} backend for {GHC}},
+  author={Terei, David A and Chakravarty, Manuel MT},
+  booktitle={ACM Sigplan Notices},
+  volume={45},
+  number={11},
+  pages={109--120},
+  year={2010},
+  organization={ACM}
+}
+
+@article{marlow2006making,
+  title={Making a fast curry: push/enter vs. eval/apply for higher-order languages},
+  author={Marlow, Simon and Jones, Simon Peyton},
+  journal={Journal of Functional Programming},
+  volume={16},
+  number={4-5},
+  pages={415--449},
+  year={2006},
+  publisher={Cambridge Univ Press}
+}
+
+@inproceedings{dijkstra2009architecture,
+  title={The Architecture of the Utrecht Haskell compiler},
+  author={Dijkstra, Atze and Fokker, Jeroen and Swierstra, S Doaitse},
+  booktitle={Proceedings of the 2nd ACM SIGPLAN symposium on Haskell},
+  pages={93--104},
+  year={2009},
+  organization={ACM}
+}
+
+@inproceedings{mainland2013exploiting,
+  title={Exploiting vector instructions with generalized stream fusion},
+  author={Mainland, Geoffrey and Leshchinskiy, Roman and Peyton Jones, Simon},
+  booktitle={Proceedings of the 18th ACM SIGPLAN international conference on Functional programming},
+  pages={37--48},
+  year={2013},
+  organization={ACM}
+}
+
+@article{leroy1990zinc,
+  title={The {ZINC} experiment: An economical implementation of the {ML} language},
+  author={Leroy, Xavier},
+  year={1990}
+}
+
+@inproceedings{appel1991standard,
+  title={Standard {ML} of New Jersey},
+  author={Appel, Andrew W and MacQueen, David B},
+  booktitle={Programming Language Implementation and Logic Programming},
+  pages={1--13},
+  year={1991},
+  organization={Springer}
+}
+
+@inproceedings{hauck1968burroughs,
+  title={Burroughs' {B6500/B7500} Stack Mechanism},
+  author={Hauck, EA and Dent, Ben A},
+  booktitle={Proceedings of the April 30--May 2, 1968, Spring Joint Computer Conference},
+  pages={245--251},
+  year={1968},
+  organization={ACM}
+}
+
+@book{ichbiah1991rationale,
+  title={Rationale for the design of the Ada programming language},
+  author={Ichbiah, Jean},
+  year={1991},
+  publisher={Cambridge University Press}
+}
+
+@phdthesis{shivers1991control,
+  title={Control-flow analysis of higher-order languages},
+  author={Shivers, Olin},
+  year={1991},
+  school={Citeseer}
+}
+
+@article{ingerman1961way,
+  title={A Way of Compiling Procedure Statements with Some Comments on
+  Procedure Declarations},
+  author={Ingerman, Peter Z},
+  journal={Commun. ACM},
+  volume={4},
+  number={1},
+  pages={55--58},
+  year={1961}
+}
+
+@inproceedings{felleisen1988theory,
+  title={The theory and practice of first-class prompts},
+  author={Felleisen, Mattias},
+  booktitle={Proceedings of the 15th ACM SIGPLAN-SIGACT symposium on Principles of programming languages},
+  pages={180--190},
+  year={1988},
+  organization={ACM}
+}
+
+@book{felleisen1986control,
+  title={Control Operators, the {SECD}-machine, and the λ-calculus},
+  author={Felleisen, Matthias and Friedman, Daniel P},
+  year={1986},
+  publisher={Indiana University, Computer Science Department}
+}
+@article{mycroft1982abstract,
+  title={Abstract interpretation and optimising transformations for applicative
+  programs},
+  author={Mycroft, Alan},
+  year={1982},
+  publisher={The University of Edinburgh}
+}
+
+@inproceedings{wadler1987projections,
+  title={Projections for strictness analysis},
+  author={Wadler, Philip and Hughes, R John M},
+  booktitle={Functional Programming Languages and Computer Architecture},
+  pages={385--407},
+  year={1987},
+  organization={Springer}
+}
+
+@inproceedings{li2007lightweight,
+  title={Lightweight concurrency primitives for GHC},
+  author={Li, Peng and Marlow, Simon and Peyton Jones, Simon and Tolmach, Andrew},
+  booktitle={Proceedings of the ACM SIGPLAN workshop on Haskell},
+  pages={107--118},
+  year={2007},
+  organization={ACM}
+}
+
+@inproceedings{chlipala2007certified,
+  title={A certified type-preserving compiler from lambda calculus to assembly language},
+  author={Chlipala, Adam},
+  booktitle={PLDI '07: Proceedings of the 28th ACM SIGPLAN Conference on Programming Language Design and Implementation},
+  volume={42},
+  number={6},
+  pages={54--65},
+  year={2007},
+  organization={ACM}
+}
+
+@article{leroy2012compcert,
+  title={The CompCert C verified compiler},
+  author={Leroy, Xavier},
+  journal={Documentation and user’s manual. INRIA Paris-Rocquencourt},
+  year={2012},
+  publisher={Citeseer}
+}

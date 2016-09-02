@@ -1,0 +1,87 @@
+\section{Introduction}
+Compilers are an attractive target for verification: the amortized return on
+investment is high. Every time a program compiled with a verified compiler is
+run, the proof ensures that the semantics of the source program are being
+preserved through execution. 
+
+Existing work has focused on verifying \emph{strict}
+languages~\cite{chlipala2007certified, leroy2012compcert}. This paper presents
+the first machine-verified compiler of a non-strict language. Non-strict languages evaluate bound variables on-demand, instead of precomputing their
+value. It is generally accepted that the mapping of a non-strict language to
+hardware is harder to reason about.  Indeed, the vast majority of languages
+have strict semantics by default largely for this reason. Reasoning formally
+about the correctness of a non-strict compiler is similarly difficult. We make
+the challenge even greater by ensuring that the most important optimization for
+non-strict languages, sharing evaluation results between instance of a
+variable, or call-by-need semantics, is implemented correctly. This turns out
+to be particularly challenging: one must reason about updating expressions with
+values in a heap. 
+
+Our approach is enabled by a recently developed abstract machine, the Cactus
+Environment Machine $\mathcal{CE}$ \cite{?}. $\mathcal{CE}$ uses a shared
+environment to share results between instances of a variable. It can be compiled
+to machine code very succinctly, reducing the load for formal reasoning about
+the compiler greatly. It is likely we would not have succeeded in (or even
+attempted) creating a verified compiler of call-by-need without this technique.
+
+The compiler and proofs use a number of different representations, including
+standard lambda calculus, lambda calculus with deBruijn terms, and locally
+nameless representation. The paper proceeds by showing each transformation that
+the compiler makes, along with the logical relations between the semantics
+
+\subsection{Main Result}
+Here we give a high level overview of the main result of the paper.
+
+Our source language is lambda calculus: 
+$$ t ::= x \; | \; \lambda x.t \; | \; t \; t $$
+
+Application is left associative, as usual, and we will generally use natural
+numbers for variables. Our target language is a simple machine assembly
+language:
+
+\begin{align}
+  \tag{Word}   n, p &\in \mathbb{N} \\
+  \tag{Registers} r &::= ip \; | \; ep \; | \; r1 \; | \; r2 \; | \; r3 \\
+  \tag{Stack}     s &::= [p] \\
+  \tag{Write Operands}  wo &::= r \; | \; p \\
+  \tag{Read Operands}  ro &::= wo \; | \; n \\
+  \tag{Instructions} i &::= \texttt{mov} \; ro \; wo \; 
+                       | \; \texttt{jmp} \; ro \; 
+                       | \; \texttt{inc} \; wo \;
+                       | \; \texttt{dec} \; wo \;
+                       | \; \texttt{new} \;  
+                       | \; \texttt{push} \; ro \\
+                       | \; \texttt{pop} \; wo \\
+  \tag{Program}   p &::= [i]
+\end{align}
+
+Our machine words are natural numbers, which can be written into registers or
+the hea. which is a partial function, or finite map, from pointers $p$ to
+words. Our instruction set is simple as well. Given our compiler, which we will
+describe in later sections, which compiles a lambda term into a program, we
+prove the following main result:
+
+\begin{theorem}[Compiler Correctness]
+Call-by-need semantics bisimulate machine semantics, and compilation
+preserves this bisimulation relation.
+\end{theorem}
+
+We'll formalize this more thoroughly later, but the bisimulation ensures that
+we're correctly sharing the results of evaluation down to machine code. Because
+the semantics are deterministic, we get the following corollary:   
+
+\begin{corollary}[Correct Results]
+If a term $t$ compiles to $p$, then call-by-need evaluates a term $t$ to a value
+$v$ \emph{iff} $p$ executes on the machine to a state $s$, where $v$ and $s$ are
+related by the bisimulation relation.
+\end{corollary}
+
+This corollary says that we get the correct value when we execute the assembly
+program on the machine. This is similar, though slightly stronger, to the result
+rom \cite{chlipala2007certified}. Chlipala shows the first half of the
+\emph{iff}, though the second half is implied by the fact that he's working with
+a total language.
+
+\subsection{Outline}
+We structure the paper as follows: for each step in the compiler, there are at
+least one 
