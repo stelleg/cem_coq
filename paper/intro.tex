@@ -1,34 +1,29 @@
 \section{Introduction}
-Compilers are an attractive target for verification: the amortized return on
-investment is high. Every time a program compiled with a verified compiler is
-run, the proof ensures that the semantics of the source program are being
+Compilers are an attractive target for verification because the amortized return
+on investment is high. Every time a program compiled with a verified compiler is
+run, the proof ensures that the semantics of the source language are being
 preserved through execution. 
 
 Existing work has focused on verifying \emph{strict}
-languages~\cite{chlipala2007certified, leroy2012compcert}. This paper presents
-the first machine-verified compiler of a non-strict language. Non-strict
-languages evaluate bound variables on-demand, instead of precomputing their
-value. It is generally accepted that the mapping of a non-strict language to
-hardware is harder to reason about.  Indeed, the vast majority of languages
-have strict semantics by default largely for this reason. Reasoning formally
-about the correctness of a non-strict compiler is similarly difficult. We make
-the challenge even greater by ensuring that the most important optimization for
-non-strict languages, sharing evaluation results between instance of a
-variable, or call-by-need semantics, is implemented correctly. This turns out
-to be particularly challenging: one must reason about updating expressions with
-values in a heap. 
+languages~\cite{chlipala2007certified, leroy2012compcert}, which pre-compute
+function arguments to values. This paper presents the first machine-verified
+compiler of a non-strict language. Non-strict languages evaluate bound variables
+on-demand. It is generally accepted that the relation between a non-strict
+language and the hardware it runs on is harder to reason about than with strict languages.
+Indeed, the vast majority of languages have strict semantics by default largely
+for this reason. Reasoning formally about the correctness of a non-strict
+compiler is similarly difficult. We make the challenge even greater by
+ensuring that the most important optimization for non-strict languages,
+sharing evaluation results between instance of a variable, or call-by-need
+semantics, is implemented correctly. This turns out to be particularly
+challenging: one must reason about updating expressions with values in a heap. 
 
 Our approach is enabled by a recently developed abstract machine, the Cactus
-Environment Machine $\mathcal{CE}$~\cite{?}. $\mathcal{CE}$ uses a shared
+Environment Machine ($\mathcal{CE}$)~\cite{?}. $\mathcal{CE}$ uses a shared
 environment to share results between instances of a variable. It can be compiled
 to machine code very succinctly, reducing the load for formal reasoning about
 the compiler greatly. It is likely we would not have succeeded in (or even
-attempted) creating a verified compiler of call-by-need without this technique.
-
-The compiler and proofs use a number of different representations, including
-standard lambda calculus, lambda calculus with deBruijn terms, and locally
-nameless representation. The paper proceeds by showing each transformation that
-the compiler makes, along with the logical relations between the semantics
+attempted) creating a verified compiler of call-by-need without this approach.
 
 \subsection{Main Result}
 Here we give a high level overview of the main result of the paper.
@@ -85,10 +80,28 @@ with a total language. Note that our bisimulation if significantly stronger than
 this type of result, which only considers the input and output: our proof of
 bisulation proves an equivalence of the execution paths.
 
+In addition to the above lemma, because call-by-need is an optimization of
+call-by-name, we get the following corollary for a relation $R$ between.
+
+\begin{corollary}[Call-by-Name Correct Result]
+If $t$ compiles to $p$, then $t$ evaluates to a value $v$ under call-by-name
+semantics \emph{iff} $p$ executes on the instruction machine to $s$, where $s$
+and $v$ are related appropriately.
+\end{corollary}
+
+This is a valuable corollary because it means for a programmer can reason about
+the simpler call-by-name semantics, namely $\beta$ reduction above lambda, and
+ensure that reasoning is preserved through compilation.
+
 \subsection{Outline}
-We structure the paper as follows: for each static semantic in the compiler,
-there are at least one dynamic semantics required for the proofs. For each
-adjacent pair of dynamic semantics, we must prove a bisimulation relation.
+The compiler and proofs use a number of different representations, including
+standard lambda calculus, lambda calculus with deBruijn terms, and locally
+nameless representation. The paper proceeds by showing each transformation that
+the compiler makes, along with the logical relations between the semantics.
+
+Specifically, we structure the paper as follows: for each static semantic in the
+compiler, there are at least one dynamic semantics required for the proofs. For
+each adjacent pair of dynamic semantics, we must prove a bisimulation relation.
 In Section 1 we cover call by need semantics, including a correction to the
 Ariola et. al's presentation`\cite{ariola1995call}. In Section 2 we cover the
 $\mathcal{CE}$ big step semantics and it's lock-step relation to call-by-need.
