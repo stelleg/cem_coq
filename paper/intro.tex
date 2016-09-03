@@ -7,16 +7,17 @@ preserved through execution.
 Existing work has focused on verifying \emph{strict}
 languages~\cite{chlipala2007certified, leroy2012compcert}, which pre-compute
 function arguments to values. This paper presents the first machine-verified
-compiler of a non-strict language. Non-strict languages evaluate bound variables
-on-demand. It is generally accepted that the relation between a non-strict
-language and the hardware it runs on is harder to reason about than with strict languages.
-Indeed, the vast majority of languages have strict semantics by default largely
-for this reason. Reasoning formally about the correctness of a non-strict
-compiler is similarly difficult. We make the challenge even greater by
-ensuring that the most important optimization for non-strict languages,
-sharing evaluation results between instance of a variable, or call-by-need
-semantics, is implemented correctly. This turns out to be particularly
-challenging: one must reason about updating expressions with values in a heap. 
+compiler of a non-strict language. Non-strict languages evaluate bound
+expressions on-demand. It is generally accepted that the relation between a
+non-strict language and the hardware it runs on is harder to reason about than
+with strict languages.  Indeed, the vast majority of languages have strict
+semantics by default largely for this reason. Reasoning formally about the
+correctness of a non-strict compiler is similarly difficult. We make the
+challenge even greater by ensuring that the most important optimization for
+non-strict languages, sharing evaluation results between instance of a variable,
+or call-by-need semantics, is implemented correctly. This turns out to be
+particularly challenging: one must reason about updating expressions with values
+in a heap. 
 
 Our approach is enabled by a recently developed abstract machine, the Cactus
 Environment Machine ($\mathcal{CE}$)~\cite{?}. $\mathcal{CE}$ uses a shared
@@ -26,34 +27,39 @@ the compiler greatly. It is likely we would not have succeeded in (or even
 attempted) creating a verified compiler of call-by-need without this approach.
 
 \subsection{Main Result}
-Here we give a high level overview of the main result of the paper.
+Here we give a high level overview of the main results of the paper, along with
+informal statements of the main theorems.
 
 Our source language is lambda calculus: 
 $$ t ::= x \; | \; \lambda x.t \; | \; t \; t $$
 
-Application is left associative, as usual, and we will generally use natural
-numbers for variables. Our target language is a simple machine assembly
-language:
+Application is left associative, as usual, and without loss of generality we
+use natural numbers for variables. Our target language is a simple machine
+assembly language:
 
 \begin{align}
   \tag{Word}   n, p &\in \mathbb{N} \\
   \tag{Registers} r &::= ip \; | \; ep \; | \; r1 \; | \; r2 \; | \; r3 \\
   \tag{Stack}     s &::= [p] \\
-  \tag{Write Operands}  wo &::= r \; | \; p \\
+  \tag{Write Operands}  wo &::= r \; | \; r* \\
   \tag{Read Operands}  ro &::= wo \; | \; n \\
   \tag{Instructions} i &::= \texttt{mov} \; ro \; wo \; 
                        | \; \texttt{jmp} \; ro \; 
                        | \; \texttt{inc} \; wo \;
-                       | \; \texttt{dec} \; wo \;
-                       | \; \texttt{new} \;  
-                       | \; \texttt{push} \; ro \\
+                       | \; \texttt{dec} \; wo \; \\
+  \notag    & \quad \; | \; \texttt{new} \; wo \;
+                       | \; \texttt{push} \; ro \; 
                        | \; \texttt{pop} \; wo \\
   \tag{Program}   p &::= [i]
 \end{align}
 
 Our machine words are natural numbers, which can be written into registers or
-the hea. which is a partial function, or finite map, from pointers $p$ to
-words. Our instruction set is simple as well. Given our compiler, which we will
+the heap, which is a partial function, or finite map, from pointers $p$ to
+words. Pointers can index into the heap or into the program. Our instructions
+are a subset of standard instructions on modern machines. Ours consist of
+\texttt{mov} instructions, direct and indirect \texttt{jmp}s, \texttt{inc}rements
+and \texttt{dec}rements, a \texttt{new} instruction that returns a fresh heap
+location, and \texttt{push} and \texttt{pop}.  Given our compiler, which we will
 describe in later sections, which compiles a lambda term into a program, we
 prove the following main result:
 
@@ -62,7 +68,7 @@ Call-by-need semantics bisimulate machine semantics, and compilation
 preserves this bisimulation relation.
 \end{theorem}
 
-We'll formalize this more thoroughly later, but the bisimulation ensures that
+We'll formalize this theorem in Section 6, but the bisimulation ensures that
 we're correctly sharing the results of evaluation down to machine code. Because
 the semantics are deterministic, we get the following corollary:   
 
@@ -74,11 +80,12 @@ related by the bisimulation relation.
 
 This corollary says that we get the correct value when we execute the assembly
 program on the instruction machine. This is similar, though slightly stronger,
-to the result rom~\cite{chlipala2007certified}. Chlipala shows the first half of
-the \emph{iff}, though the second half is implied by the fact that he's working
-with a total language. Note that our bisimulation if significantly stronger than
-this type of result, which only considers the input and output: our proof of
-bisulation proves an equivalence of the execution paths.
+to the result from~\cite{chlipala2007certified}, where Chlipala shows the first
+half of the \emph{iff}. In defense of that paper though the second half is
+implied implicitly by the fact that he's working with a total language. Note
+that our bisimulation if significantly stronger than this type of result, which
+only considers the input and output: our proof of bisimulation proves an
+equivalence of the execution paths.
 
 In addition to the above lemma, because call-by-need is an optimization of
 call-by-name, we get the following corollary for a relation $R$ between.
@@ -89,26 +96,26 @@ semantics \emph{iff} $p$ executes on the instruction machine to $s$, where $s$
 and $v$ are related appropriately.
 \end{corollary}
 
-This is a valuable corollary because it means for a programmer can reason about
-the simpler call-by-name semantics, namely $\beta$ reduction above lambda, and
-ensure that reasoning is preserved through compilation.
+This is a valuable corollary because it means a programmer can reason about the
+simpler $\beta$ reduction-based call-by-name semantics, and be confident that
+their reasoning is preserved through compilation and execution.
 
 \subsection{Outline}
 The compiler and proofs use a number of different representations, including
-standard lambda calculus, lambda calculus with deBruijn terms, and locally
+standard lambda calculus, lambda calculus with deBruijn indices, and a locally
 nameless representation. The paper proceeds by showing each transformation that
-the compiler makes, along with the logical relations between the semantics.
+the compiler makes, along with the bisimulation relations between the semantics.
 
-Specifically, we structure the paper as follows: for each static semantic in the
-compiler, there are at least one dynamic semantics required for the proofs. For
-each adjacent pair of dynamic semantics, we must prove a bisimulation relation.
-In Section 1 we cover call by need semantics, including a correction to the
-Ariola et. al's presentation`\cite{ariola1995call}. In Section 2 we cover the
-$\mathcal{CE}$ big step semantics and it's lock-step relation to call-by-need.
-In Section 3 we describe the $\mathcal{CE}$ small step semantics and how it
-relates to the big step semantics. We finish the chain in Section 4, describing
-the instruction machine semantics and it's relation to the $\mathcal{CE}$ small
-step semantics. While this compiler is untyped, we use Section 5 to discuss how
-one could incorporate a type system into the compiler. We then discuss threats
-to validity in Section 6 and conclude in Section 7. 
+Specifically, in Section 1 we cover call by need semantics, including a
+correction to the Ariola et. al's presentation`\cite{ariola1995call}. In Section
+2 we cover the $\mathcal{CE}$ big step semantics and it's lock-step relation to
+call-by-need.  In Section 3 we describe the $\mathcal{CE}$ small step semantics
+and how it relates to the big step semantics. We finish the chain in Section 4,
+describing the instruction machine semantics and it's relation to the
+$\mathcal{CE}$ small step semantics. While this compiler is untyped, we use
+Section 5 to discuss how one could incorporate a type system into the compiler.
+We then discuss threats to validity in Section 6 and conclude in Section 7. 
+
+The compiler and all the proofs are available as Coq source code at
+\texttt{https://github.com/stelleg/cem\_coq}.
 

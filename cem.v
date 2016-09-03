@@ -207,7 +207,6 @@ destruct c0. destruct H1. destruct H2. split. unfold isfresh. rewrite domain_inf
 with (m':= cl c' n). assumption. split. apply closed_under_inf' with (c':=c').
 auto. apply IHh. assumption. Qed. 
 
-Ltac induce h := (prep_induction h; induction h; intros; subst).
 
 Lemma monotonic_heap : ∀ c1 c2, c1 ⇓ c2 → domain (st_heap c1) ⊆ domain (st_heap c2).  
 intros c1 c2 step.  induction step; unfold st_heap in *; simpl in *.

@@ -11,6 +11,8 @@ Require Export set.
 Require Export JRWTactics.
 Import ListNotations. 
 
+Ltac induce h := (prep_induction h; induction h; intros; subst).
+
 Definition Map a b := list (a * b).
 
 Lemma wrap : forall A B (f:A -> B), f = fun a:A => f a. auto. Qed.  
