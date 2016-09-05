@@ -369,6 +369,19 @@ induction x; intros.
   assumption. assumption. 
 Qed. 
 
+Lemma well_formed_heap_replace : ∀ Φ Ψ c v e l, 
+  well_formed_heap (Φ ++ (l, cl c e) :: Ψ) →
+  closed_under v Ψ →
+  well_formed_heap (Φ ++ (l, cl v e) :: Ψ).
+intros. induction Φ. simpl. inversion H. destruct H2. split; try split; auto.
+simpl in H. destruct a. destruct c0. inversion H. destruct H2. apply IHΦ in H3.
+split. unfold isfresh. rewrite domain_inf with (m':=cl c e). assumption. split;
+auto. destruct H. unfold closed_under. destruct c0. apply in_forevery. intros.
+unfold closed_under in H4. destruct H4. rewrite for_in_iff  in H4. specialize
+(H4 x H5). destruct H4. destruct H4. eapply linkage_clu in H4. exists x0. apply H4.  
+apply well_formed_heap_has_unique_domain. auto. unfold linkage. rewrite map_app.
+rewrite map_app. simpl. apply subset_id. Qed.   
+
 Lemma clu_monotonic_reachable : ∀ Ψ x e c v l cl Ψ' Υ, 
   unique (domain (Υ ++ Ψ)) →
   clu x e Ψ  = Some (l,cl) →

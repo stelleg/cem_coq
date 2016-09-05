@@ -352,6 +352,20 @@ intros. assert (H0':=H0). apply related_lists_eq_length in H0. apply
 eq_length_app2 in H0.  eapply related_lists_inf. apply H0. apply H0'.
 constructor. assumption. Qed.
 
+Lemma related_lists_injtl {a b} : ∀ (x:a) xs (ys : list b) r,
+  related_lists r (xs ++ [x]) ys → 
+  ∃ ys' y, ys = ys' ++ [y].
+intros. induce xs. inversion H. subst. inversion H4. subst. exists nil,
+y. reflexivity. inversion H. subst. apply IHxs in H4. destruct H4. destruct H0.
+subst. exists (y::x0), x1. reflexivity. Qed.
+
+Lemma related_lists_injtr {a b} : ∀ (x:a) xs (ys : list b) r,
+  related_lists r ys (xs ++ [x]) → 
+  ∃ ys' y, ys = ys' ++ [y].
+intros. induce xs. inversion H. subst. inversion H4. subst. exists nil,
+x0. reflexivity. inversion H. subst. apply IHxs in H4. destruct H4. destruct H0.
+subst. exists (x0::x1), x2. reflexivity. Qed.
+
 Lemma related_lists_inf1 {a b} : ∀ (x:a) xs xs' (ys:list b) r, 
   related_lists r (xs ++ x :: xs') ys → 
   ∃ y ys' ys'', ys = ys' ++ y :: ys'' ∧ 
@@ -643,7 +657,7 @@ apply IHstep in H1. unfold not. intros. induction H4; simpl;
 intros; subst. rewrite domain_inf with (m':=M) in H5. specialize (H1
 (rcbni _ _ _ H4 H5)). assumption. apply IHcbn_reachable. assumption. assumption.
 intros. clear H2. destruct (eq_nat_dec x x0); subst. simpl in H. rewrite
-domain_inf with (m':=t) in H. apply lookup_env in H. apply (not_impl _ _ _ H1). specialize (IHcbn_reachable
+ domain_inf with (m':=t) in H. apply lookup_env in H. apply (not_impl _ _ _ H1). specialize (IHcbn_reachable
 H0 H3). specialize (H1 (rcbntran _ _ _ _ _ H4 H5specialize (. simpl in IHcbn_reachable. clear H6. specialize
 (H7 (rcbntran _ _ _ _ _ H H0 H4)).  specialize
 (IHcbn_reachable M N y x0 Φ Υ Φ' Υ' H1 ud H2 H3 H'). 
@@ -661,19 +675,101 @@ simpl in H.
 
 *)
 
-Lemma eq_length_sym {a b} : ∀ (xs:list a) (ys:list b), eq_length xs ys → eq_length ys xs. 
-intros; induction H; try constructor; auto. Qed.  
+Lemma eq_length_sym {a b} : ∀ (xs:list a) (ys:list b), eq_length xs ys →
+eq_length ys xs.  intros; induction H; try constructor; auto. Qed.  
+
+Lemma related_lists_sym {a b} : ∀ (xs : list a) (ys : list b) r, 
+  related_lists r xs ys → 
+  related_lists (λ x y xs ys, r y x ys xs) ys xs.
+intros. induce H. constructor. constructor; auto. Qed. 
+
+Lemma related_lists_injr1 {a b} : ∀ (xs xs': list a) (ys ys': list b) y r,
+  eq_length xs (ys ++ [y]) →
+  related_lists r (xs ++ xs') (ys ++ [y] ++ ys') →
+  ∃ xs'' x, xs = xs'' ++ [x].
+intros. induce H. symmetry in H2. apply app_eq_nil in H2. crush. destruct ys0.
+subst. simpl in H2. inversion H2. subst. inversion H. subst. exists nil, x.
+reflexivity. inversion H2. subst. inversion H0. subst. simpl in IHeq_length.
+apply IHeq_length in H7. crush. exists (x::x0), x1. reflexivity. reflexivity.
+Qed. 
+
+Lemma related_lists_injr2 {a b} : ∀ (xs xs': list a) (ys ys': list b) y r,
+  eq_length xs' ys' →
+  related_lists r (xs ++ xs') (ys ++ [y] ++ ys') →
+  ∃ xs'' x, xs = xs'' ++ [x].
+intros. assert (H0':=H0). apply related_lists_eq_length in H0. rewrite app_assoc
+in H0. apply eq_length_app2 in H0; auto. apply related_lists_injr1 in H0'; auto.
+Qed.  
+
+Lemma conftolg_iff_closed_under : ∀ c e l, conftolg c e 0 = Some l ↔ 
+  cem.closed_up_to c e. 
+split; intros. unfold conftolg in H. destruct c. 
+
+Lemma eq_terms_app : ∀ t c e e', 
+  unique (domain (e' ++ e)) →
+  eq_terms t c e → eq_terms t c (e' ++ e).
+intros. unfold eq_terms. inversion H0. destruct (conftolg c (e' ++ e) 0)
+eqn:ctle. unfold conftolginversion H2. unfold conftolg. 
 
 Lemma eq_confs_step1 : ∀ ce cb cb', eq_confs ce cb → cbn.step cb cb' → ∃ ce',
   cem.step ce ce' ∧ eq_confs ce' cb'. 
 intros. prep_induction H0. induction H0; intros. 
 - inversion H. destruct H2.  destruct ce. destruct H3. destruct H4. assert
-	(H5':=H5). apply related_lists_inf2 in H5. destruct H5. destruct H5. destruct
-  H5. destruct H5. subst. assert (H5:=H5'). apply related_lists_eq_length in H6.
-  apply eq_length_sym in H6. apply related_lists_inf' in H5'; auto. destruct x0.
-  destruct c. destruct H5'. subst. assert (H1':=H1). apply cem.well_formed_inf
-  in H1. destruct st_clos0. apply eq_confs_var1 in H.  destruct H.  subst.
-  destruct IHstep with (ce:=cem.conf (. 
+  (H5':=H5). assert (cbnwf:=H2). apply related_lists_inf2 in H5. destruct H5.
+  destruct H5. destruct H5. destruct H5. subst. assert (H5:=H5'). assert
+  (H6':=H6). apply related_lists_eq_length in H6.  apply eq_length_sym in H6.
+  apply related_lists_inf' in H5'; auto. destruct x0.  destruct c. destruct H5'.
+  subst. assert (H1':=H1). apply cem.well_formed_inf in H1. destruct st_clos0.
+  apply eq_confs_var1 in H.  destruct H.  subst.  destruct IHstep with
+  (ce:=cem.conf x2 (unreachable ++ x1 ++ [(x, cem.cl c n0)]) c). split. apply
+  cem.well_formed_inf in H1'. assumption. split.  apply cbn.well_formed_app in
+  H2. assumption. simpl. split. assumption. repeat (rewrite <- app_assoc).
+  split. assumption. unfold eq_heaps. apply related_lists_sym. assumption.
+  destruct H. destruct x3. destruct st_clos0. assert (H7':=H7). apply
+  eq_confs_lam1 in H7. destruct H7. subst. inversion H7'.  destruct H9. destruct
+  H10. destruct H11. rewrite <- app_assoc in H11. rewrite <- app_assoc in H11. simpl
+  in H11. rewrite app_assoc in H11. assert (H11' := H11).  assert (H12':=H12). apply
+  related_lists_eq_length in H12'. eapply (related_lists_injr2 unreachable0
+  reachable _ _ (x, M) _) in H12'. Focus 2.  simpl. apply H11'. crush. rewrite
+  app_assoc in H11'. apply related_lists_inf' in H11'. destruct x7. destruct c0.
+  destruct H11'. subst. assert (x6 = unreachable ++ x1 ∧ c = c0 ∧ n1 = n0).
+  inversion H; subst; rewrite app_assoc in H28; apply app_inj_tail in H28;
+  destruct H28; inversion H24; subst; split; try split; auto. crush. exists
+  (cem.conf (x1 ++ (x, cem.cl (cem.close (db.lam x3) clos_env0) n0) ::
+  reachable) unreachable (cem.close (db.lam x3) clos_env0)). split.  apply
+  cem.Id. unfold eq_terms in H3. simpl in H3. rewrite <- minus_n_O in H3.
+  inversion H3. symmetry in H24. unfold compose in H24. simpl in H24. 
+  unfold fmap_option in H24. destruct (cem.clu x0 clos_env (x1 ++ (x, cem.cl c0
+  n0) :: x2)) eqn:clu. destruct p. simpl in H24. inversion H24. subst. apply
+  unique_clu_clo in clu. subst. reflexivity. apply
+  cem.well_formed_heap_has_unique_domain. apply cem.well_formed_heap_app with
+  (Φ:=unreachable). assumption.  inversion H24. assumption. assert
+  (cem.well_formed_heap (unreachable ++ x1 ++ (x, cem.cl (cem.close (db.lam x3)
+  clos_env0) n0) :: reachable)). inversion H7'. destruct H9. rewrite app_assoc. 
+  apply cem.well_formed_heap_replace with (c:=c0). rewrite <- app_assoc.
+  assumption. assumption. split; try split; auto. inversion H7'. destruct H22.
+  apply cem.closed_under_weaken. apply unique_domain_app. apply
+  cem.well_formed_heap_has_unique_domain. apply cem.well_formed_heap_app with
+  (Φ:=unreachable). assumption. apply cem.closed_under_cons. apply
+  cem.well_formed_heap_has_unique_domain in H9. repeat (rewrite <- app_assoc in
+  H9). rewrite domain_app in H9. apply cem.unique_weaken_app in H9. rewrite
+  domain_app in H9. apply cem.unique_weaken_app in H9. simpl in H9. inversion
+  H9. assumption. assumption. apply cbn.Id in H0. apply cbn.well_formed_step in
+  H0. assumption. split; auto. split; auto. simpl. unfold eq_terms. simpl.  assumption. replace ((x, cem.cl (cem.close (db.lam x3)
+  clos_env0) n0)::reachable) with  ([(x, cem.cl (cem.close (db.lam x3)
+  clos_env0) n0)]++reachable). apply cem.closed_under_weaken.apply cem.closed_under_app. assumption. simpl. estruct H10.  apply
+  cem.closed_under_weaken. apply unique_domain_app. apply
+  cem.well_formed_heap_has_unique_domain. assumption.
+  inversion H22. destruct p. simpl in *. subst. unfold
+  compose in H22. simpl in
+  H22. 
+  assumption.  cem.conf exists x3'. split. unfold x3'. apply cem.Id.
+  onstructor.  
+  
+  inversion H0. destruct H2. destruct x3. (H0':=H0). apply
+  eq_confs_lam1 in H0'. destruct H0. destruct H1. destruct x3. inversion H.
+  subst. destruct H. apply eq_length_sym. assumption.  assumption. rewrite <-
+  app_assoc. rewrite <- app_assoc. rewrite <- app_assoc(unreachable
   apply
   related_lists_inf' in H5; auto. exists inversion H.  destruct H6. destruct H7.
   destruct st_clos0. inversion H7. apply eq_confs_var1 in H. destruct H.  subst.
