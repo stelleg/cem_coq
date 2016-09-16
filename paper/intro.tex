@@ -100,6 +100,20 @@ This is a valuable corollary because it means a programmer can reason about the
 simpler $\beta$ reduction-based call-by-name semantics, and be confident that
 their reasoning is preserved through compilation and execution.
 
+\subsection{Contributions}
+There are two primary contributions of this paper. 
+\begin{itemize}
+\item The first verified compiler of a higher order language that proves that
+the machine semantics \emph{bisimulate} the source semantics
+\item The first verified compiler of a non-strict language
+\end{itemize}
+
+The bisimulation contribution is crucial: with just a proof of correct
+\emph{results}, one can't reason formally about things like memory and time
+requirements at the source level. This is doubly important for non-strict
+languages where formal reasoning about analyses such as strictness analysis
+are crucial for performance.
+
 \subsection{Outline}
 The compiler and proofs use a number of different representations, including
 standard lambda calculus, lambda calculus with deBruijn indices, and a locally
@@ -118,4 +132,5 @@ We then discuss threats to validity in Section 6 and conclude in Section 7.
 
 The compiler and all the proofs are available as Coq source code at
 \texttt{https://github.com/stelleg/cem\_coq}.
+
 

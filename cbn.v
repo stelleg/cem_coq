@@ -172,6 +172,14 @@ simpl in H0. inversion H0. subst. inversion H. subst.
 specialize (IHΦ Φ' _ Ψ' _ H8 H6 H4). destruct IHΦ. subst. auto. Qed. 
 
 (*
+Lemma well_formed_inf_insert : ∀ Φ Ψ x M,
+  isfresh (Ψ ++ Φ) x →
+  well_formed_heap (Ψ ++ Φ) →
+  closed_under M Φ →
+  well_formed_heap (Ψ ++ (x,M) :: Φ).
+intros. induction Ψ. constructor; auto. simpl in H0. destruct a. destruct H0.
+constructor; auto. simpl in H. 
+
 Lemma det_step : ∀ a b c, well_formed a → a ⇓ b → a ⇓ c → b = c. 
 intros a b c wf s. generalize dependent c. induction s. assert (wfx := wf).
 apply well_formed_app in wf.  intros. inversion H. subst. symmetry in H0. apply
@@ -319,8 +327,6 @@ intros. split. unfold not. intros. apply or_introl with
 (B:=reachable h l n) in H0. apply reachable_or_app in H0. apply H in H0.
 assumption. unfold not. intros. apply or_intror with (A:=reachable h l m)in
 H0. apply reachable_or_app in H0. apply H in H0. assumption. Qed. 
-
-Definition substep 
 
 Lemma heap_reachable_step : ∀ Φ Ψ m v l e, step (st Ψ m) (st Φ v) →
                                            lookup l Ψ = Some e →
