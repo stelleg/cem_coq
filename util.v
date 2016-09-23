@@ -23,6 +23,10 @@ Definition relation (A B : Type) := A → B → Prop.
 Definition equiv {A B} := ∀ (a a':A) (b b':B) (ra : rel A) (rb : rel B)
   (e : relation A B), e a b → ra a a' → rb b b' → e a' b'.
 
+Lemma in_comm {a} : ∀ l l' (x:a) , In x (l ++ l') <-> In x (l' ++ l).
+split; intros; rewrite in_app_iff; rewrite or_comm; rewrite <- in_app_iff;
+assumption. Qed.
+
 Lemma not_impl : ∀ p q : Prop, ¬ q → (p → q) → ¬ p. 
 unfold not. intros. apply H. apply H0. assumption. Qed.  
 
@@ -45,6 +49,43 @@ Fixpoint concat {a} (l: list (list a)) : list a := match l with
   
 Notation "f <$> x" := (fmap_option f x) (at level 30).
 Notation "f <*> x" := (seq_option f x) (at level 40).
+
+Fixpoint indexofhelper {a} (l:list a) (n:nat) (p:a → bool) := match l with
+  | [] => None
+  | x::xs => if p x then Some n else indexofhelper xs (S n) p
+  end. 
+
+Definition indexof {a} (p:a → bool) (l:list a) : option nat := 
+  indexofhelper l 0 p. 
+
+Definition indexofn (n:nat) (l:list nat) : option nat := indexof (beq_nat n) l. 
+
+Lemma indexofh_length {a} : ∀ p l n m, @indexofhelper a l m p = Some n → n < m + length l.
+induction l; intros. inversion H. simpl. unfold indexof in H. unfold
+indexofhelper in H. destruct (p a0). inversion H. subst. unfold lt. rewrite <-
+Plus.plus_Snm_nSm. apply Plus.le_plus_l. rewrite <- Plus.plus_Snm_nSm.
+apply IHl. assumption. Qed. 
+
+Lemma indexof_length {a} : ∀ p l n, @indexof a p l = Some n → n < length l. 
+intros. unfold indexof in H. apply indexofh_length in H. auto. Qed. 
+
+Lemma indexofn_inh : ∀ x xs n m, indexofhelper xs m (beq_nat x) = Some n → In x xs. 
+induction xs; intros. inversion H. unfold indexofn in H. unfold indexofhelper in H.
+destruct (beq_nat x a) eqn:be. simpl. apply beq_nat_true in be. subst. auto.
+apply IHxs in H. simpl. auto. Qed. 
+
+Lemma indexofn_in : ∀ x xs n, indexofn x xs = Some n → In x xs. 
+intros. unfold indexofn in H. unfold indexof in H. apply indexofn_inh in H.
+assumption. Qed. 
+
+Lemma in_indexofnh : ∀ x xs m, In x xs → ∃ n, indexofhelper xs m (beq_nat x) = Some n. 
+induction xs; intros. inversion H. inversion H. subst. exists m. unfold
+indexofn. unfold indexof. unfold indexofhelper. rewrite <- beq_nat_refl. auto.
+apply IHxs with (m:=S m) in H0. destruct H0. simpl. destruct (beq_nat x a)
+eqn:bn. exists m. reflexivity. exists x0. auto. Qed.
+
+Lemma in_indexofn : ∀ x xs, In x xs → ∃ n, indexofn x xs = Some n. 
+intros. apply in_indexofnh with (m:=0) in H. destruct H. exists x0. auto. Qed. 
 
 Lemma filter_app {A} : ∀ xs ys (p:A → bool), filter p xs ++ filter p ys = filter p (xs ++ ys). 
 intros. induction xs. reflexivity. simpl. destruct (p a). simpl. 
@@ -114,9 +155,9 @@ intros. induction xs. simpl. auto. simpl. f_equal. assumption. Qed.
 Definition domain {a b} (m : Map a b) : list a := map (@fst a b) m.
 Definition codomain {a b} (m : Map a b) : list b := map (@snd a b) m.
 
-Definition isfresh {a} (h : Map nat a) (n : nat) : Prop := ¬ In n (domain h). 
-Axiom fresh : ∀ {a:Type} (h:Map nat a), {n | isfresh h n}.
-Definition fresh' {A} (x: nat) (Φ : Map nat A) :=
+Definition isfresh (l: list nat) (n : nat) : Prop := ¬ In n l. 
+Axiom fresh : ∀ (l:list nat), {n | isfresh l n}.
+Definition fresh' (x: nat) (Φ : list nat) :=
   ∃ p, fresh Φ = exist (isfresh Φ) x p. 
 
 Definition homotopy {A B} (f g : A→B) := ∀ x, f x = g x.

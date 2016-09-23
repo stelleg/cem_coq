@@ -28,7 +28,7 @@ Inductive step : configuration → configuration → Prop :=
             ⟨Ψ, x ↦ M, Φ & Υ⟩ x ⇓ ⟨Ψ', x ↦ :λy,N, Φ & Υ⟩:λy,N
   | Abs : ∀ N x Φ Ψ, ⟨Ψ & Φ⟩:λx,N ⇓ ⟨Ψ & Φ⟩:λx,N
   | App : ∀ M N L B y x x' Φ Ψ Υ Φ',
-              fresh' x' (Ψ ++ Φ') → 
+        fresh' x' (vars N ++ domain (Ψ ++ Φ')) → 
             ⟨Φ & Ψ⟩L ⇓ ⟨Φ' & Ψ⟩:λx,N → 
         ⟨Φ', x' ↦ M & Ψ⟩[var x'//x]N ⇓ ⟨Υ & Ψ⟩:λy,B →
            ⟨Φ & Ψ⟩(L@M) ⇓ ⟨Υ & Ψ⟩:λy,B
@@ -43,7 +43,7 @@ Definition closed (t : tm) : Prop := closed_under t nil.
 
 Fixpoint well_formed_heap (h : heap) : Prop := match h with
   | nil => True
-  | (v,t)::h => isfresh h v ∧  closed_under t h ∧ well_formed_heap h
+  | (v,t)::h => isfresh (domain h) v ∧  closed_under t h ∧ well_formed_heap h
   end. 
   
 Definition well_formed (c : configuration) : Prop := match c with 
@@ -101,10 +101,11 @@ rewrite <- domain_inf with (m:=M). rewrite <- app_assoc. rewrite <- app_assoc in
 IHstep. rewrite <- app_assoc in IHstep. rewrite <- app_assoc in IHstep. rewrite
 <- app_assoc in IHstep. simpl in IHstep. apply IHstep. assumption. assumption. 
 unfold st_heap in *. simpl in *. apply IHstep2. rewrite unique_domain_app.
-simpl. apply ucons. unfold fresh' in H0. destruct H0. unfold not. intros. apply
-x0. unfold domain. rewrite map_app. apply in_or_app. apply or_comm. apply
-in_app_or. rewrite <- map_app. assumption.  rewrite unique_domain_app. apply
-IHstep1. assumption. Qed. 
+simpl. apply ucons. unfold fresh' in H0. destruct H0. unfold not. intros. unfold
+isfresh in x0. clear H0. rewrite in_app_iff in x0. apply not_or in x0. destruct
+x0. rewrite domain_app in H2. rewrite in_comm in H2. rewrite <- domain_app in
+H2. apply H2 in H1. inversion H1. rewrite unique_domain_app. apply IHstep1.
+assumption. Qed. 
 
 Lemma not_vars_fvs : ∀ n e, ~(In n (vars e)) -> ~(In n (fvs e)).
 induction e. simpl. intros. assumption. simpl. rewrite in_app_iff. rewrite
@@ -131,7 +132,7 @@ subset_id. apply subset_trans with (ys:=domain (Ψ ++ x' ↦ M :: Φ')). unfold
 domain at 2. rewrite map_app. apply subset_comm2. simpl. apply subset_cons.
 apply subset_comm2.  rewrite <- map_app. assumption. assumption. Qed. 
 
-Lemma well_formed_heap_inf : ∀ Φ Ψ v m, isfresh (Ψ ++ Φ) v → closed_under m Φ → 
+Lemma well_formed_heap_inf : ∀ Φ Ψ v m, isfresh (domain (Ψ ++ Φ)) v → closed_under m Φ → 
   well_formed_heap (Ψ ++ Φ) → well_formed_heap (Ψ ++ (v,m) :: Φ). 
 intros. induction Ψ. split. assumption. auto. destruct a. simpl. split. 
 inversion H1. unfold isfresh. unfold not. intros. unfold domain in H4. rewrite
@@ -154,7 +155,8 @@ assumption. apply IHstep1 in H3. clear IHstep2 IHstep1 H. split. unfold
 closed_under. simpl. apply subset_trans with (ys:=x'::remove x (fvs N)). apply
 subst_subset. simpl. split. auto. inversion H3. unfold closed_under in H. unfold
 fvs in H. apply subset_cons. assumption. inversion H3. apply
-well_formed_heap_inf. destruct H0. assumption. apply subset_trans with
+well_formed_heap_inf. destruct H0. unfold isfresh in x0. clear H0. rewrite in_app_iff in
+x0. apply not_or in x0. destruct x0. assumption. apply subset_trans with
 (ys:=domain Φ). assumption. apply monotonic_reachable in H0_. assumption.
 assumption. Qed. 
 

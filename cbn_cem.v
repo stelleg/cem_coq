@@ -106,37 +106,52 @@ Record configuration := conf {
   st_clos : lgexpr
 }.
 
+Lemma zero_not_in_fmap_s {a} : ∀ m, ¬ In 0 (codomain (@map (a * nat) (a * nat) (fmap S) m)). 
+intros. induction m. auto. simpl. unfold not. intros. destruct H. destruct a0.
+simpl in H. inversion H. apply IHm in H. inversion H. Qed. 
+
+Lemma unique_map {a b} : ∀ m (f:a→b), relations.injective f → unique m → unique (map f m). 
+intros. induction m. simpl. constructor. simpl. inversion H0. subst. apply IHm in
+H4. constructor. unfold not. intros. apply H3. rewrite in_map_iff in H1.
+destruct H1. destruct H1. apply H in H1. subst. assumption. assumption. Qed. 
+
+Lemma unique_zero_fmap {a} : ∀ m (x:a), unique (codomain m) → unique (codomain ((x,0)::map (fmap S) m)). 
+intros. simpl. constructor. apply zero_not_in_fmap_s. assert (codomain (map
+(fmap S) m) = map S (codomain m)). induction m. reflexivity. destruct a0. simpl
+in *. inversion H. subst. apply IHm in H3. rewrite H3. reflexivity. rewrite H0.
+apply unique_map. unfold relations.injective. intros. apply NPeano.Nat.succ_inj.
+assumption. assumption. Qed.
+
 (* Relation for equivalent terms *)
-Inductive eq_terms_rel (m:Map nat nat) (env:nat) (d:nat)
-  (h:cem.heap) : expr.tm → db.tm → Prop :=
-  | eq_lvar : ∀ v v', lookup v m = Some v' → v' < d → 
-                  eq_terms_rel m env d h (expr.var v) (db.var v')
-  | eq_gvar : ∀ v v' cl, lookup v m = None → v' >= d → cem.clu (v' - d) env h = Some (v,cl) →
-                  eq_terms_rel m env d h (expr.var v) (db.var v')
-  | eq_abs : ∀ v b b' env', eq_terms_rel ((v,0)::map (fmap S) m) env' (S d) h b b' → 
-                  eq_terms_rel m env d h (expr.abs v b) (db.lam b')  
-  | eq_app : ∀ l l' n n', eq_terms_rel m env d h l l' → eq_terms_rel m env d h n n' → 
-                            eq_terms_rel m env d h (expr.app l n) (db.app l' n')
+Inductive eq_terms_rel (m:list nat) (env:nat) (h:cem.heap) iso : expr.tm → db.tm → Prop :=
+  | eq_lvar : ∀ v v', indexofn v m = Some v' → 
+                  eq_terms_rel m env h iso (expr.var v) (db.var v')
+  | eq_gvar : ∀ v x v' cl,     x >= length m → 
+                       cem.clu (x - length m) env h = Some (v',cl) →
+                              In (v, v') iso →
+                  eq_terms_rel m env h iso (expr.var v) (db.var x)
+  | eq_abs : ∀ v b b', eq_terms_rel (v::m) env h iso b b' → 
+                  eq_terms_rel m env h iso (expr.abs v b) (db.lam b')  
+  | eq_app : ∀ l l' n n', eq_terms_rel m env h iso l l' → eq_terms_rel m env h iso n n' → 
+                            eq_terms_rel m env h iso (expr.app l n) (db.app l' n')
 .
 
-(*
-Definition eq_terms (t:expr.tm) (c:cem.closure) (h:cem.heap) : Prop := 
+Definition eq_terms_dec (t:expr.tm) (c:cem.closure) (h:cem.heap) : Prop := 
   Some (etolg t nil) = conftolg c h 0.
-*)
 
-Definition eq_terms (t:expr.tm) (c:cem.closure) (h:cem.heap) : Prop := match c with
-    cem.close e env => eq_terms_rel [] env 0 h t e end.
+Definition eq_terms (t:expr.tm) (c:cem.closure) (h:cem.heap) iso : Prop := match c with
+    cem.close e env => eq_terms_rel [] env h iso t e end.
 
-Definition eq_heaps (h : cem.heap) (h' : cbn.heap) := related_lists (λ x y tl _, match x,y,tl with
-  | (l, cem.cl c e), (l', t), tl => l = l' ∧ eq_terms t c tl
+Definition eq_heaps (h : cem.heap) (h' : cbn.heap) iso := related_lists (λ x y tl _, match x,y,tl with
+  | (l, cem.cl c e), (l', t), tl => In (l, l') iso ∧ eq_terms t c tl iso
   end) h h'.
 
-Definition eq_confs (c: cem.configuration) (c':cbn.configuration) : Prop := 
+Definition eq_confs (c: cem.configuration) (c':cbn.configuration) iso : Prop := 
   cem.well_formed c ∧ cbn.well_formed c' ∧ 
   match c, c' with
-  | cem.conf h ur cl, cbn.st h' ur' e' => eq_terms e' (cem.st_clos c) (cem.reachable c) 
-                                        ∧ eq_heaps (ur ++ h) (ur' ++ h')
-                                        ∧ eq_heaps h h'
+  | cem.conf h ur cl, cbn.st h' ur' e' => eq_terms e' (cem.st_clos c) (cem.reachable c) iso
+                                        ∧ eq_heaps (ur ++ h) (ur' ++ h') iso
+                                        ∧ eq_heaps h h' iso
   end.
 
 Fixpoint depth_env (xs : list nat) (y : nat) := match xs with 
@@ -162,19 +177,14 @@ apply Gt.gt_n_S in g. destruct (gt_dec (S (a + 1)) (S y)). apply IHxs. apply n
 in g. inversion g. destruct (gt_dec (S (a+1)) (S y)). apply Gt.gt_S_n in g.
 apply n in g. inversion g. apply IHxs. Qed.   
 
-Lemma eq_terms_compile : ∀ t e xs, db t xs = Some e → eq_terms_rel xs 0
-  (depth_env (codomain xs) 0) [] t e. 
-induction t; intros.  simpl. simpl in H. destruct (lookup n xs) eqn:lu. inversion
-H.  subst. constructor; auto. apply lookup_codomain in lu. assert
-(h':=depth_env_gt (codomain xs) 0). rewrite for_in_iff in h'. apply h' in lu.
-unfold gt in lu. assumption. inversion H. simpl in H. destruct (db t1 xs)
+Lemma eq_terms_compile : ∀ t e xs, db t xs = Some e →
+  eq_terms_rel xs 0 [] [] t e. 
+induction t; intros.  simpl. simpl in H. destruct (indexofn n xs) eqn:ind. inversion
+H.  subst. constructor; auto. inversion H. simpl in H.  destruct (db t1 xs)
 eqn:t1e. destruct (db t2 xs) eqn:t2e. apply IHt1 in t1e. apply IHt2 in t2e.
-inversion H. subst. apply eq_app; auto. inversion H. inversion H. simpl in H.
-destruct (db t ((n,0)::map (fmap S) xs)) eqn:dbt. apply IHt in dbt. inversion H.
-subst. apply eq_abs with (env':=0). rewrite depth_env_map. simpl in dbt. unfold
-codomain. rewrite map_map.  unfold codomain in dbt. rewrite map_map in dbt.
-assert (∀ (x:nat * nat), snd (fmap S x) = S (snd x)). intros. destruct x.
-reflexivity. apply map_homo  in H0. rewrite <- H0. assumption. inversion H. Qed.
+inversion H. subst. apply eq_app; auto.  inversion H. inversion H. simpl in H.
+destruct (db t (n::xs)) eqn:dbt. apply IHt in dbt. inversion H.  subst. apply
+eq_abs. assumption. inversion H. Qed.
 
 (*
 Lemma expr_db_eq : ∀ t e xs, db t xs = Some e → conftolg (cem.close e 0) nil
@@ -196,16 +206,16 @@ assert (depth_env (codomain xs) 0 > n0). rename xs into Xs. refine (forevery_in
  destruct x. simpl. reflexivity. inversion H. Qed.  
  *)
 
-Lemma expr_db_eq_confs : ∀ t e, db t nil = Some e → eq_confs (cem.I e) (cbn.I t).
-intros. split; split. simpl. apply expr_db_closed in H. apply subset_nil2 in H.
-rewrite H. simpl. auto. simpl. auto. split. unfold cbn.closed_under. simpl.
-apply expr_db_closed_under in H. assumption. unfold cbn.well_formed_heap. simpl.
-auto. unfold cem.I. unfold cbn.I. split. simpl. apply eq_terms_compile.
-assumption. simpl. split; constructor. Qed. 
+Lemma expr_db_eq_confs : ∀ t e, db t nil = Some e → eq_confs (cem.I e) (cbn.I t) [].
+intros. split; split. simpl. rewrite for_in_iff. intros. apply expr_db_closed
+with (x:=x) in H. simpl in H. inversion H. assumption. simpl. auto. simpl.
+split; auto. apply expr_db_closed_under in H. assumption. simpl. split. apply
+eq_terms_compile. assumption. split; constructor. Qed.
 
-Lemma eq_heaps_domains : ∀ h h', eq_heaps h h' → domain h = domain h'. 
-intros. induction H. reflexivity. destruct x. destruct c. destruct y. destruct
-H. subst. simpl. f_equal. assumption. Qed.
+Lemma eq_heaps_domains : ∀ h h' iso, eq_heaps h h' iso → related_lists (λ x y _ _,
+  In (x, y) iso) (domain h) (domain h').
+intros. induction H. constructor. simpl. destruct x. destruct c. destruct y.
+simpl. destruct H. constructor; auto. assumption. Qed.
 
 Lemma lu_inf' {A} : ∀ h l (c:A), lookup l h = Some c → 
   ∃ Φ Ψ, h = Φ ++ (l, c) :: Ψ.
@@ -427,32 +437,35 @@ Lemma related_lists_inf2 {a b} : ∀ (x:a) xs xs' (ys:list b) r,
 intros. apply related_lists_flip in H. apply related_lists_inf1 in H.
 assumption. Qed. 
 
-Lemma eq_confs_inf : ∀ x x' l m c e y y' m' c', 
+Lemma eq_confs_inf : ∀ x x' l m c e y y' m' c' iso, 
   eq_confs (cem.conf  y' (x' ++ [(l, cem.cl c e)]) c')
            (cbn.st y (x ++ [(l, m)]) m')
-→ eq_terms m c y'.
+           iso
+→ eq_terms m c y' iso.
 intros. destruct H. destruct H0. destruct H1. destruct H2. unfold eq_heaps in
 H2. rewrite <- app_assoc in H2. rewrite <- app_assoc in H2. simpl in H2. apply
 related_lists_inf' in H2. destruct H2. assumption. apply related_lists_eq_length
 in H3. assumption. Qed. 
 
-Lemma eq_confs_var1 : ∀ Φ Ψ x t e ur ur', 
+Lemma eq_confs_var1 : ∀ Φ Ψ x t e ur ur' iso, 
   eq_confs (cem.conf Φ ur (cem.close t e)) 
-           (cbn.st Ψ ur' (expr.var x)) → 
+           (cbn.st Ψ ur' (expr.var x)) 
+           iso → 
   ∃ v, t = db.var v.
 intros. inversion H. destruct H1. destruct H2. inversion H2. subst. exists v'.
-reflexivity. subst. exists v'. reflexivity. Qed. 
+reflexivity. subst. exists x0. reflexivity. Qed. 
 
-Lemma eq_confs_lam1 : ∀ Φ Ψ x b t e ur ur', 
+Lemma eq_confs_lam1 : ∀ Φ Ψ x b t e ur ur' iso, 
   eq_confs (cem.conf Φ ur (cem.close t e)) 
-           (cbn.st Ψ ur' (expr.abs x b)) → 
+           (cbn.st Ψ ur' (expr.abs x b)) 
+           iso → 
   ∃ b, t = db.lam b.
 intros. destruct H. destruct H0. destruct H1. inversion H1. subst. exists b'.
 reflexivity.  Qed. 
 
-Lemma eq_confs_app1 : ∀ Φ Ψ m n t e ur ur', 
+Lemma eq_confs_app1 : ∀ Φ Ψ m n t e ur ur' iso,
   eq_confs (cem.conf Φ ur (cem.close t e)) 
-           (cbn.st Ψ ur' (expr.app m n)) → 
+           (cbn.st Ψ ur' (expr.app m n)) iso → 
   ∃ m n, t = db.app m n.
 intros. destruct H. destruct H0. destruct H1. inversion H1. subst. exists l',
 n'. reflexivity. Qed. 
@@ -736,7 +749,7 @@ IHclos_tm2 in H0. rewrite H1. rewrite H0. assumption. Qed.
 (* If a term is closed in an environment, it's closed in an extended environment
 and therefore compiles to the same locally nameless term *)
 Lemma conftolg_cons : ∀ x cl xs t c n, 
-  isfresh xs x →  
+  ¬ In x (domain xs) →  
   conftolg t xs n = Some c → 
   conftolg t ((x,cl)::xs) n = Some c. 
 intros. unfold conftolg in *. destruct t. generalize dependent n. generalize
@@ -757,46 +770,47 @@ Lemma conftolg_weaken : ∀ xs ys t c n,
 intros. induction xs. assumption. inversion H. subst. apply IHxs in H4. simpl.
 destruct a. simpl in *. apply conftolg_cons; auto. Qed.  
 
-Lemma eq_terms_cons : ∀ t c x cl h, 
-  isfresh h x → 
-  eq_terms t c h → 
-  eq_terms t c ((x,cl)::h).
+Lemma eq_terms_cons : ∀ t c x cl h iso, 
+  isfresh (domain h) x → 
+  eq_terms t c h iso → 
+  eq_terms t c ((x,cl)::h) iso.
 intros. unfold eq_terms. destruct c. simpl in H0. induction H0. constructor;
-auto. apply eq_gvar with (cl:=cl0); auto. destruct cl. apply cem.clu_cons; auto.
-apply IHeq_terms_rel in H. clear IHeq_terms_rel. apply eq_abs with (env':=env').
+auto. apply eq_gvar with (v':=v') (cl:=cl0); auto. destruct cl. apply cem.clu_cons; auto.
+apply IHeq_terms_rel in H. clear IHeq_terms_rel. apply eq_abs.
 assumption. constructor; auto. Qed.
 
-Lemma eq_terms_app : ∀ t c e e', 
+Lemma eq_terms_app : ∀ t c e e' iso, 
   unique (domain (e' ++ e)) →
-  eq_terms t c e → eq_terms t c (e' ++ e).
+  eq_terms t c e iso → eq_terms t c (e' ++ e) iso.
 intros. induction e'. assumption. destruct a. simpl in *. inversion H. subst.
 apply eq_terms_cons. assumption. apply IHe'. assumption. Qed.
 
-Lemma eq_heaps_replace : ∀ xs xs' ys ys' x c n t t' c',
+Lemma eq_heaps_replace : ∀ xs xs' ys ys' x c n t t' c' iso,
   eq_length xs' ys' → 
-  eq_heaps (xs ++ (x, cem.cl c n) :: xs') (ys ++ (x, t) :: ys') →
-  eq_terms t' c' xs' → 
-  eq_heaps (xs ++ (x, cem.cl c' n) :: xs') (ys ++ (x, t') :: ys').
+  eq_heaps (xs ++ (x, cem.cl c n) :: xs') (ys ++ (x, t) :: ys') iso →
+  eq_terms t' c' xs' iso → 
+  eq_heaps (xs ++ (x, cem.cl c' n) :: xs') (ys ++ (x, t') :: ys') iso.
 intros. assert (H0':=H0). apply related_lists_eq_length in H0'. apply
 eq_length_app2 in H0'; try (constructor; auto). induction H0'. simpl in H0.
-inversion H0.  subst. clear H5. simpl. constructor; auto. simpl. destruct x0.
+inversion H0.  subst. clear H5. simpl. constructor; auto. inversion H0. subst.
+auto. split. destruct H5. assumption. assumption. destruct x0.
 inversion H0. subst. apply IHH0' in H7. destruct c0. destruct y. destruct H5.
 subst. constructor; auto. split; auto. unfold eq_terms in H3. destruct c0. clear
 - H3. simpl in *. remember (xs ++ (x, cem.cl c n) :: xs'). induction H3; intros; subst; (try
-(constructor; assumption)). apply cem.clu_inf with (c':=c') in H1. destruct H1.
-apply eq_gvar with (cl:=x0); auto. apply eq_abs with (env':=env'). apply
+(constructor; assumption)). apply cem.clu_inf with (c':=c') in H0. destruct H0.
+apply eq_gvar with (v':=v') (cl:=x1); auto. apply eq_abs. apply
 IHeq_terms_rel. reflexivity. constructor. apply IHeq_terms_rel1; reflexivity.
 apply IHeq_terms_rel2; reflexivity. Qed.
 
-Lemma eq_confs_app_lr : ∀ m n m' n' env r r' ur ur', 
+Lemma eq_confs_app_lr : ∀ m n m' n' env r r' ur ur' iso, 
   eq_confs (cem.conf r ur (cem.close (db.app m n) env))
-           (cbn.st r' ur' (expr.app  m' n'))
+           (cbn.st r' ur' (expr.app  m' n')) iso
   ↔ 
   eq_confs (cem.conf r ur (cem.close m env))
-           (cbn.st r' ur' m')
+           (cbn.st r' ur' m') iso
   ∧
   eq_confs (cem.conf r ur (cem.close n env))
-           (cbn.st r' ur' n').
+           (cbn.st r' ur' n') iso. 
 split; intros. 
 - destruct H. destruct H0. destruct H1. simpl in H1. destruct H.
   destruct H0. inversion H1. subst.  unfold cem.closed_under in *. simpl in H. rewrite
@@ -876,18 +890,118 @@ apply beq_nat_true in beqn. subst. simpl in H. assert False. apply H. auto.
 inversion H0. apply IHm. apply beq_nat_false in beqn. simpl in H. unfold not.
 intros. apply H. apply or_intror. assumption. Qed. 
 
-Lemma eq_terms_binding : ∀ env h b b' f x c,
-  isfresh h f →
-  eq_terms_rel [] env 0 h (expr.abs x b) (db.lam b') →
-  eq_terms_rel [] f 0 ((f, cem.cl c env)::h) (expr.subst x (expr.var f) b) b'. 
-intros. inversion H0. simpl in *. subst. remember ([(x,0)]). induction H2;
+Lemma lookup_head_neq {a} : ∀ x y v (m:Map nat a), x ≠ y → lookup y ((x,v)::m) = lookup y m. 
+intros. unfold lookup. simpl. apply not_eq_sym in H. rewrite <-
+beq_nat_false_iff in H. rewrite H. reflexivity. Qed. 
+
+Lemma utailcod {a b} : ∀ (x:a) (d:b) m, unique (codomain ((x,d)::m)) → unique (codomain m).  
+intros. inversion H; auto. Qed. 
+
+Fixpoint take {a} (n : nat) : list a → list a := λ l, match n with
+  | 0 => []
+  | S n => match l with 
+    | [] => []
+    | x::xs => x::take n xs
+    end
+  end.
+
+Fixpoint subst_bindings (env: list (nat * nat)) (t:expr.tm) : expr.tm := match t with
+  | expr.var v => match lookup v env with 
+    | Some v' => expr.var v'
+    | None => expr.var v
+    end
+  | expr.abs v b => expr.abs v (subst_bindings  
+      (filter (λ x, match x with (y, y') => negb (beq_nat y v) end) env) b)
+  | expr.app m n => expr.app (subst_bindings env m) (subst_bindings env n)
+  end.
+
+Lemma indexofn_head : ∀ x xs, indexofn x (x::xs) = Some 0. 
+intros. unfold indexofn. unfold indexof. simpl. rewrite <- beq_nat_refl.
+reflexivity. Qed. 
+
+Lemma indexofnh_none_not_in : ∀ x xs m, indexofhelper xs m (beq_nat x) = None ↔ ¬ In x xs. 
+split; intros. unfold not. intros. apply in_indexofnh with (m:=m) in H0. destruct H0.
+rewrite H in H0. inversion H0. generalize dependent m. induction xs. auto. apply
+Decidable.not_or in H. destruct H.  unfold indexofn. unfold indexof. simpl.
+apply not_eq_sym in H. rewrite <- beq_nat_false_iff in H. rewrite H.  intros.
+apply IHxs. assumption. Qed. 
+
+Lemma indexofn_none_not_in : ∀ x xs, indexofn x xs = None ↔ ¬ In x xs. 
+intros. unfold indexofn. unfold indexof. rewrite indexofnh_none_not_in. split;
+auto. Qed. 
+
+Fixpoint extend_heap (m:list nat) (h:cem.heap) (b:expr.tm) : cem.heap := match m with
+  | [] => h
+  | e::es => extend_heap (m:list nat) (h:cem.heap) (b:expr.tm) : cem.heap  
+  end. 
+  
+Lemma eq_terms_binding : ∀ env h b b' x c m,
+  eq_terms_rel m env h b b' →
+  eq_terms_rel [] f ((f, cem.cl c env)::h) (expr.subst x (expr.var f) b) b'.  
+intros. remember (x::m). induce H1. simpl in H. simpl.  destruct (eq_nat_dec x
+v). subst. rewrite indexofn_head in H. inversion H. subst. apply eq_gvar with
+(cl:=c). subst. rewrite indexofn_none_not_in. assumption.  rewrite lookup_head
+in H. inversion H. subst. apply eq_gvar with (cl:=c). rewrite
+lookup_none_not_in. assumption.  constructor. rewrite minus_diag. simpl. rewrite
+lookup_head. reflexivity. apply eq_lvar. rewrite lookup_head_neq in H; auto.
+unfold lt in H2. inversion H0. subst. rewrite lookup_head_neq in H; auto. apply
+lookup_codomain in H. inversion H3. subst.
+apply H6 in H.  inversion H. subst. unfold lt. assumption. simpl. destruct (eq_nat_dec x v). 
+subst. rewrite lookup_head in H. inversion H. apply eq_gvar with (cl:=cl).
+rewrite lookup_head_neq in H; auto. inversion H0. subst. constructor.
+constructor. subst. apply Le.le_S_n in H0. constructor. assumption. rewrite
+NPeano.Nat.sub_succ_r in H1. destruct (v' - d0) eqn:min. rewrite
+NPeano.Nat.sub_0_le in min. unfold ge in H0. apply Le.le_trans with (n:=S d0) in
+min; auto. apply Le.le_Sn_n in min. inversion min. simpl in H1. simpl. rewrite
+lookup_head. apply cem.clu_cons. assumption. assumption. simpl. destruct
+(eq_nat_dec x v). subst. nversion min. subst. inversion H0. symmetry in H5. apply n_Sn in
+H5. inversion H5.   . constructor. inversion H5. subst. constructor. constructor.
+subst. constructor. 
+rewrite lookup_head_neq in H; auto. assumption. 
+unfold lookup in H1. simpl in H1. apply . rewrite H1 in H0. inversion H0. subst. apply eq_gvar with (cl:=c). rewrite lookup_head in H2. inversion H2. subst. apply eq_gvar with
+(cl:=c).  rewrite
+lookup_none_not_in. assumption.  rewrite domain_fmap.  assumption. constructor. simpl.
+rewrite lookup_head.
+reflexivity. apply not_eq_sym in n. rewrite <- beq_nat_false_iff in n.
+simpl in H. unfold lookup in H. simpl in H. rewrite n in H. apply eq_gvar with
+(cl:=c. assumption. inversino H3. . induce
+H2. simpl in H.  
+prep_induction H2. induction H2. ::map (fmap S) m). remember (S d).
+induce H3. 
+- simpl. destruct (eq_nat_dec x v). subst. rewrite lookup_head in H. inversion
+  H. subst. exists m0, 0. split; auto. split. apply Le.le_0_n. apply eq_gvar with (cl:=c).
+  rewrite lookup_none_not_in.  assumption. auto. simpl. rewrite lookup_head.
+  reflexivity. unfold lookup in H. simpl in H. apply not_eq_sym in n. rewrite <-
+  beq_nat_false_iff in n. rewrite n in H. exists (map (fmap S) m0), d0. split.  
+  apply domain_fmap. split. auto. apply eq_lvar. assumption. 
+  auto. apply eq_lvar.  induction m0. inversion H. destruct a. simpl. unfold
+  lookup. simpl. simpl in
+  H. destruct (beq_nat v n0). 
+  assumption. destruct 
+  split. 
+  lookup_indoin.  auto. auto.  simpl. rewrite lookup_head. auto. unfold lookup
+  in H1. simpl in H1. apply
+  not_eq_sym in n. rewrite <- beq_nat_false_iff in n. rewrite n in H1. inversion
+  H1. inversion H5.  
+- simpl. unfold lookup in H1. destruct (eq_nat_dec x v).  subst. simpl in *.
+  rewrite <- beq_nat_refl in H1. inversion H1. clear H1.  apply eq_gvar with
+  (cl:=cl). auto. unfold ge in *.  apply Le.le_0_n. unfold cem.clu.  simpl.
+  destruct v'; simpl; rewrite lookup_head. inversion H3. apply cem.clu_cons;
+  auto. simpl in H4. rewrite <- minus_n_O in H4. assumption. 
+- simpl in H2. simpl. destruct (eq_nat_dec x v). subst. simpl in *.  destruct lookup simpl in *. pply H0. . simpl in H.
+  destruct (beq_nat v x)
+  eqn:bevx. inversion H. rewrite beq_nat_false_iff in bevx. inversion H0. subst.
+  subst. rewrite <- beq_nat_refl in H.  generalize
+dependent d. induction H2;
 subst. apply lookup_domain in H1. simpl in H1. destruct H1. subst.  inversion
 H0. subst. inversion H3. subst. inversion H6. subst. simpl. rewrite
 eq_nat_dec_refl.  apply eq_gvar with (cl:=c). auto.  auto. simpl. rewrite
 lookup_head. reflexivity. subst. inversion H4. subst. rewrite lookup_head in H5.
 inversion H5. inversion H1. rewrite lookup_none_not_in in H1. simpl in H1.
 simpl. destruct (eq_nat_dec x v). subst. assert False. apply H1. auto. inversion
-H4. apply eq_gvar with (cl:=cl). auto. apply Le.le_0_n.  inversion H0. subst.
+H4. apply eq_gvar with (cl:=cl). auto. apply Le.le_0_n.  rewrite 
+
+inversion H0. subst.
 simpl in H5. unfold cem.clu. simpl in H2. sert (H0':=H0). apply lookup_domain in H0'.
 simpl in H0'. destruct H0'. subst. simpl. rewrite eq_nat_dec_refl. apply
 eq_gvar with (cl:=c). . simpl. destruct (eq_nat_dec x v). subst.

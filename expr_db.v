@@ -5,12 +5,12 @@ Require Import db util.
 Require Import Unicode.Utf8. 
 
 (* Compiles standard expressions to terms with deBruijn indices *)
-Fixpoint db (t : expr.tm) (env : Map nat nat) : option tm := match t with 
-  | expr.var v => match lookup v env with
+Fixpoint db (t : expr.tm) (env : list nat) : option tm := match t with 
+  | expr.var v => match indexofn v env with
     | Some v' => Some (var v')
     | None => None
     end
-  | expr.abs v b => match db b ((v, 0):: map (fmap S) env) with 
+  | expr.abs v b => match db b (v::env) with 
     | Some b' => Some (lam b')
     | None => None
     end
@@ -23,45 +23,41 @@ Fixpoint db (t : expr.tm) (env : Map nat nat) : option tm := match t with
     end
   end.
 
-Lemma expr_closed_under_db: ∀ t xs, expr.fvs t ⊆ domain xs → {e | db t xs = Some e}.
-intros t. induction t; intros; simpl in H. destruct H. simpl.
-apply in_domain_lookup in H.  destruct H. rewrite e. exists (db.var x).
-reflexivity. 
+Lemma expr_closed_under_db: ∀ t xs, expr.fvs t ⊆ xs → ∃ e, db t xs = Some e. 
+intros t. induction t; intros; simpl in H. destruct H. simpl. apply in_indexofn
+in H. destruct H. exists x. rewrite H. auto. 
 
 rewrite app_subset_and in H. destruct H. apply IHt1 in H. apply IHt2 in H0.
-destruct H.  destruct H0. simpl. rewrite e. rewrite e0. exists (db.app x x0).
+destruct H.  destruct H0. simpl. rewrite H. rewrite H0. exists (db.app x x0).
 reflexivity.   
 
-simpl in H. rewrite <- subset_remove_cons in H. rewrite <- domain_fmap with
-(f:=S) in H.  specialize (IHt ((n,0)::map (fmap S) (xs))). simpl in IHt.  apply
-IHt in H. simpl. destruct H. rewrite e. exists (db.lam x). reflexivity. Qed.
+simpl in H. rewrite <- subset_remove_cons in H. apply IHt in H. destruct H.
+simpl. rewrite H. exists (db.lam x). reflexivity. Qed.
 
-Lemma expr_db_closed_under : ∀ t xs e, db t xs = Some e → expr.fvs t ⊆ domain xs. 
+Lemma expr_db_closed_under : ∀ t xs e, db t xs = Some e → expr.fvs t ⊆ xs. 
 intros t. induction t; intros; simpl in H.
 
-destruct (lookup n xs) eqn:Heqo. apply lookup_domain in Heqo. simpl. split;
-auto. inversion H. 
+destruct (indexofn n xs) eqn:Heqo. apply indexofn_in in Heqo. simpl. auto.
+inversion H. 
 
 simpl. destruct (db t1 xs) eqn:Heqo. destruct (db t2 xs)
 eqn:Heqo0. apply IHt1 in Heqo. apply IHt2 in Heqo0. rewrite app_subset_and; 
 split; auto. inversion H. inversion H. 
 
-specialize (IHt ((n,0)::map (fmap S) xs)). destruct (db t ((n,0)::map (fmap S)
-xs)) eqn:Heqo. inversion H. subst. symmetry in Heqo. specialize (IHt t0
-eq_refl). simpl. simpl in IHt. rewrite domain_fmap in IHt. rewrite <-
+specialize (IHt (n::xs)). destruct (db t (n::xs)) eqn:Heqo. inversion H. subst.
+symmetry in Heqo. specialize (IHt t0 eq_refl). simpl. simpl in IHt. rewrite <-
 subset_remove_cons.  assumption.  inversion H. Qed.
 
-Lemma expr_db_closed : ∀ t e xs, db t xs = Some e → db.fvs e ⊆ codomain xs. 
-intros t. induction t; intros. inversion H. destruct (lookup n xs). inversion
-H1. subst. simpl. split; auto. unfold codomain. inversion H. remember (lookup n
-xs). destruct o. symmetry in Heqo. apply lookup_codomain in Heqo. inversion H2.
-subst. assumption. inversion H2. inversion H1. simpl in H. remember (db t1 xs).
-remember (db t2 xs). destruct o. destruct o0. symmetry in Heqo. symmetry in
-Heqo0. apply IHt1 in Heqo. apply IHt2 in Heqo0. inversion H. subst. simpl.
-rewrite app_subset_and. split; auto. inversion H. inversion H. inversion H.
-remember (db t ((n,0) :: map (fmap S) xs)). destruct o. symmetry in Heqo. apply
-IHt in Heqo. inversion H1. subst. simpl. simpl in Heqo. unfold codomain in Heqo.
-rewrite map_map in Heqo. rewrite subset_remove_cons in Heqo. apply subset_map with
-(f:=pred) in Heqo. rewrite map_map in Heqo. simpl. rewrite (map_homo _ _
-snd_fmap) in Heqo. assumption. inversion H1. Qed. 
-
+Lemma expr_db_closed : ∀ t e x xs, db t xs = Some e → In x (db.fvs e) → x < length xs.
+intros t. induction t; intros. simpl in H. destruct (indexofn n xs) eqn:ind.
+apply indexof_length in ind. inversion H. subst. simpl in H0. destruct H0.
+subst. assumption. inversion H0. inversion H. simpl in H. destruct (db t1 xs)
+eqn:db1. destruct (db t2 xs) eqn:db2. inversion H. subst. simpl in H0. rewrite
+in_app_iff in H0. destruct H0. apply IHt1 with (x:=x) in db1; auto. apply IHt2
+with (x:=x) in db2; auto. inversion H. inversion H. simpl in H. destruct (db t
+(n::xs)) eqn:db. inversion H. subst. apply IHt with (x:=S x) in db. simpl in
+H0. simpl in db. apply Lt.lt_S_n. assumption. simpl in H0. rewrite in_map_iff in
+H0. destruct H0. destruct H0. subst. destruct x0 eqn:x0e. apply remove_in in H1.
+inversion H1. simpl. simpl. assert (x0 <> 0). unfold not. intros. subst.
+inversion H0. rewrite <- remove_not_in. apply H1. subst. assumption. inversion
+H. Qed. 

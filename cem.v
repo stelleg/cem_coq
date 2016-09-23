@@ -58,7 +58,7 @@ Definition closed (t : tm) : Prop := closed_under (close t 0) nil.
 
 Fixpoint well_formed_heap (h : heap) : Prop := match h with
   | nil => True
-  | v↦cl t e::h => isfresh h v ∧  closed_under t h ∧ well_formed_heap h
+  | v↦cl t e::h => isfresh (domain h) v ∧  closed_under t h ∧ well_formed_heap h
   end. 
 
 Definition well_formed (c : configuration) : Prop := match c with 
@@ -72,7 +72,7 @@ Inductive step : configuration → configuration → Prop :=
     ⟨Φ, x↦cl M y, Υ & Ψ⟩close v z ⇓ ⟨Φ', x↦ cl (close (:λB) e) y, Υ & Ψ⟩close (:λB) e
   | Abs : ∀ N Φ Ψ e, ⟨Φ & Ψ⟩close (:λN) e ⇓ ⟨Φ & Ψ⟩close (:λN) e
   | App : ∀ N M B B' Φ Φ' Ψ Υ f e ne ae, 
-                  fresh' f (Ψ ++ Φ') → 
+                  fresh' f (domain (Ψ ++ Φ')) → 
           ⟨Φ & Ψ⟩close M e ⇓ ⟨Φ' & Ψ⟩close (:λB) ne → 
       ⟨Φ', f ↦cl (close N e) ne & Ψ⟩close B f ⇓ ⟨Υ & Ψ⟩close (:λB') ae   →
               ⟨Φ & Ψ⟩close (M@N) e ⇓ ⟨Υ & Ψ⟩close (:λB') ae
@@ -140,7 +140,7 @@ destruct c. destruct H. destruct H0.  assumption. apply IHh. destruct c.
 destruct H. destruct H0.  assumption. Qed. 
 
 Lemma clu_cons : ∀ c c' x ne ne' xs f,
-  isfresh xs f →
+  isfresh (domain xs) f →
   clu x ne xs = Some c → 
   clu x ne (f↦cl c' ne'::xs) = Some c.
 intros c c' x. induction x; intros. simpl in H0. remember (lookup ne xs). destruct
@@ -398,25 +398,22 @@ Lemma closed_under_comm : ∀ h h' c ,
 intros. destruct c. simpl in *. rewrite for_in_iff. rewrite for_in_iff in H0.
 intros. specialize (H0 x H1). rewrite clu_app in H0; auto. Qed.
 
-Lemma in_comm {a} : ∀ l l' (x:a) , In x (l ++ l') <-> In x (l' ++ l).
-split; intros; rewrite in_app_iff; rewrite or_comm; rewrite <- in_app_iff;
-assumption. Qed.
-
 Lemma closed_under_cons : ∀ h x c n e,
-  isfresh h x → closed_under c h → closed_under c (x↦cl n e::h). 
+  isfresh (domain h) x → closed_under c h → closed_under c (x↦cl n e::h). 
 intros. unfold closed_under in H0. destruct c. rewrite for_in_iff in H0. unfold
 closed_under. rewrite for_in_iff. intros. apply H0 in H1. destruct H1. destruct
 H1. exists x1, x2. apply clu_cons. assumption. assumption. Qed. 
 
-Lemma isfresh_comm {a} : ∀ (h h':Map nat a) x, isfresh (h ++ h') x → isfresh (h' ++ h) x.
+Lemma isfresh_comm {a} : ∀ (h h':Map nat a) x, isfresh (domain (h ++ h')) x →
+isfresh (domain (h' ++ h)) x.
 intros. unfold isfresh. unfold not. intros. rewrite domain_app in H0. rewrite
 in_comm in H0. rewrite <- domain_app in H0. apply H in H0. assumption. Qed.  
 
-Lemma isfresh_cons {a} : ∀ h (x:nat * a) y, isfresh (x::h) y → isfresh h y. 
+Lemma isfresh_cons : ∀ h (x:nat) y, isfresh (x::h) y → isfresh h y. 
 intros. unfold isfresh. unfold not. intros. apply H. simpl. auto. Qed. 
 
 Lemma well_formed_heap_insert_inf : ∀ Φ f N e Ψ, 
-  isfresh (Φ ++ Ψ) f →
+  isfresh (domain (Φ ++ Ψ)) f →
   closed_under N Ψ →
   well_formed_heap (Φ ++ Ψ) →
   well_formed_heap (Φ ++ f ↦ cl N e :: Ψ).

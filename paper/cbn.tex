@@ -1,0 +1,66 @@
+\section{Call-by-need}
+
+Call-by-need semantics ensures that arguments are only evaluated when needed,
+when needed, and memoize the result so that they are only evaluated once. This
+is in contrast to the more common call-by-value, which always evaluates
+arguments, and call-by-name, which evaluates arguments for every corresponding
+variable dereference. Each semantics has advantages and drawbacks, and
+increasingly programming languages are incorporating the ability to switch
+between them \cite{?}. 
+
+Our source language is Ariola et al.'s call-by-need lambda calculus \cite{?}. It
+is an untyped language with the standard lambda calculus for it's syntax: 
+
+  $$ t := x \; | \; \lambda x . t \; | \; t \; t $$
+
+Ariola et al. give a few different versions of their semantics. To ease 
+proof burdens, we use the operational semantics, though formalizing the
+syntactic account and it's connection to the operational semantics would be
+interesting future work. The semantics are given in Figure~\ref{cbn}. 
+
+Unfortunately the operational semantics have a known issue, which was exposed
+during our formalization. The issue is that upon evaluation of a dereferenced
+variable, part of the heap is forgotten. When adding fresh variables, the
+semantics requires that they are fresh with respect only to the \emph{current}
+heap, but when merging back with the previously forgotten heap in the Id rule,
+the semantics can break the invariant that every address in the domain of the
+heap is unique, and can therefore perform incorrect evaluation. For an example
+of how it can go wrong see Figure~\ref{cbnwrong}, 
+
+To fix this problem, instead of throwing away the unreachable part of the heap
+in the Id rule, we keep it around, but separate the reachable heap from the
+unreachable explicitly. We then ensure that freshness is enforced with respect
+to both the unreachable and reachable parts of the heap, preventing the issue
+described above. This fix has the additional benefit that it simplifies the
+relationship to machine code, keeping the heap in tact as a global entity, in
+contrast to existing fixes to this issue \cite{?}. The fixed semantics are shown
+in Figure~\ref{cbnfixed}.
+
+We expand the notion of a configuration being well formed to include  
+
+\subsection{Call-by-name}
+A crucial property of call-by-need is that it is an optimized implementation of
+the simpler call-by-name semantics: 
+
+\begin{align}
+\inference{l \downarrow \lambda x. b \; \;  b [x \rightarrow m] \downarrow v}{l \; m \downarrow v}
+\end{align}
+
+This implies that any expression that evaluates to a value in call-by-name will
+evaluate to an equivalent value in call-by-need. This is a valuable property to
+have, because it means we can reason about \emph{correctness} properties of a
+source language, e.g. type preservation, using these simpler evaluation
+semantics. 
+
+It's worth noting here that there are cases when requiring call-by-need
+semantics is detrimental to performance. The basic idea is that there are cases
+when storing a value and referencing it later is more expensive than re-creating
+it on demand. For example, the function \texttt{mean xs = sum xs / length xs}
+when called on a something like \texttt{[1..10000]} will memoize the list in
+memory for the call to \texttt{sum}, then traverse it to compute the
+\texttt{length}.  If the memoization restriction was lifted to permit any
+non-strict semantics, like call-by-name, this operation could be computed more
+quickly entirely in machine registers. While we choose to verify compilation of
+simpl call-by-need semantics, we'll return to this discussion of relaxed
+non-strict semantics in the Discussion section.
+
