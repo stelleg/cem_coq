@@ -1,0 +1,77 @@
+\section{Applications}
+
+Now that we've seen how the compiler preserves the semantics of the source
+language, we can look at what sorts of tools this gives us for reasoning about
+the output of the compiler. The basic idea is as follows: because of the
+strength of the bisimulation relation, almost all reasoning about the source
+semantics is preserved through to the resulting binary. This includes properties
+like runtime, heap usage, stack size, types, and of course, correctness of
+the results.
+
+\subsection{Time}
+
+One of the most common concerns for someone writing source code for a compiler
+is runtime. The ability of programmers to reason about their code's performance
+is hampered by the common philosophy of compilers: use any means necessary, no
+matter how hard to reason about at the source level, to make code run fast. This
+is a reasonable default; when reasoning about code performance, it is a very
+rare case that the programmer \emph{doesn't} want their code to run as fast as
+possible. 
+
+That said, there are cases when the compiler isn't clever enough. The long-lived
+hope for the \emph{sufficiently clever compiler} is dead for now. Instead,
+programmers are forced to rewrite their code to improve performance. Re-writing
+code to improve performance will often require reasoning about opaque decisions
+made by the optimizing compiler in question; not an easy task by any measure.
+Stream fusion, and other heuristics, are examples of the importance, but also
+the fragility of this approach.
+
+\subsection{Types}
+
+When we discuss reasoning about our programs at the source level, it would be
+irresponsible to give types anything less than their own subsection. Types are
+how we do formal reasoning about programs in practice, and when building a
+compiler, we'd like to make sure this reasoning is preserved. Chlipala showed
+elegantly how types can be provably preserved through compilation simply typed
+strict lambda calculus in \cite{?}. While this paper has focused on untyped
+lambda calculus, we use this section to show how the strength of the
+bisimulation proof ensures that any type-based reasoning will be preserved
+through evaluation.  
+
+Unfortunately, because we've already fixed our term syntax to be untyped, we
+cannot do this reasoning within the common context of explicitly typed
+langauges, e.g. System F or the Calculus of Constructions. Instead, we must turn
+to a completely implicit type system, which makes type judgements on simple
+lambda terms, not unlike a subset of existing Hindley-Milner style languages. We
+see no reasoning that this line of reasoning should not extend to more powerful
+explicit type systems. 
+
+To formalize this, we generalize the notion of a type judgement to any relation
+between a source term and some arbtrary type, represented as a Type variable in
+Coq. Leaving the type system completely abstract, we define a typing judgement
+to be of the form:
+
+\begin{lstlisting}
+Variable type : Type.
+Variable hasType : relation tm type.
+\end{lstlisting}
+
+To reason about our abstract type we turn to a property that just about every
+type system must ahere to: preservation. Preservation says that if a term has a
+type, and takes one or more steps, its type must be preserved. We choose to
+define preservation using the semantics of call-by-name, as they are our
+simplest semantics when to use when we aren't concerned with operational
+subtleties.
+
+\begin{lstlisting}
+Variable preservation : ∀ (t t':tm) (tau:type), 
+  hasType t tau → cbname.step t t' →
+  hasType t' tau.
+\end{lstlisting}
+
+Given a proof of presevation for our type system for call-by-name, we can prove
+that the compiled code respects this, similar to Chlipala's proof that his
+simply typed lambda calculus compiler was type-preserving.
+
+
+                                                

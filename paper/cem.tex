@@ -1,0 +1,59 @@
+\section{Cactus Environment Big Step Semantics}
+
+Of course, when compiling to machine code, we need a mechanical way to
+efficiently implement the substitution and memoization as described in
+call-by-need semantics. For this we turn to the recently developed Cactus
+Environment $\mathcal{CE}$ Machine \cite{?}. 
+
+We define a cactus environment machine state to be well formed if, like the
+call-by-name semantics, a closure bound in the heap is closed to the left.
+We also require the closure in question to be closed under the reachable heap,
+and all domain variables to be unique across both the unreachable and reachables
+heaps. Because we are using deBruijn indices, when referring to a fresh heap
+location, we don't require freshness with respect to a substitution term,
+because there is no substitution. This will be important when relating the two
+states. We have the following lemma showing that well-formedness is preserved
+through evaluation TODO.
+
+\begin{figure}
+\textbf{Syntax}
+\begin{align*}
+\tag{Term} t &::= i \; | \; \lambda t \; | \; t \; t  \\
+\tag{Variable} i &\in \mathbb{N}  \\
+\tag{Closure} c &::= t [\rho] \\
+\tag{Environment} \rho &::= \bullet \; | \; c \cdot \rho \\
+\end{align*}
+\textbf{Semantics}
+\begin{align*}
+\tag{LEval}\inference
+{t_1[\rho] {\xrightarrow{* }}_L \lambda t_2[\rho'] }
+{t_1 t_3[\rho] \rightarrow_L t_2[t_3[\rho] \cdot \rho'] } 
+\end{align*}
+\begin{align*}
+\tag{LVar} i [c_0 \cdot c_1 \cdot ... c_i \cdot \rho] \rightarrow_L c_i
+\end{align*}
+\caption{Curien's call-by-name calculus of closures ~\cite{curien1991abstract}}
+\label{fig:calcclos}
+\end{figure}
+
+\subsection{Bisimulation with Call-by-Need}
+
+Our bisimulation relation between call-by-need and the big step cactus
+environment semantics requires a few different properties. First, we require
+that both states are well formed. Second, we need a way to relate heap
+locations. Because our freshness conditions vary, we cannot without loss of
+generality choose a freshness function that operates on heap domains and use
+equality for our heap domain relation. Instead, we must generate and retain an
+isomorphism between $\mathcal{CE}$ and CBN heap locations. Thirdly, we need a
+way to relate terms with free variables from deBruijn indices to standard
+indices. For this, we use an logical relation that corresponds to a type of
+\emph{locally nameless} representation \cite{?}. Indeed, one can show that the
+relation holds iff the two terms can be translated into equal locally nameless
+terms, modulo the free variables being related by the heap location isomorphism.  
+See the \texttt{eq\_terms} for the definition of this relation.
+
+For our proof that the relation is a bisimulation, \texttt{cbn\_cem\_bisim}, we
+proceed by induction on each of the step relations.  For the \texttt{Id} rules
+for each semantics, the proof follows from the fact that   
+
+

@@ -13,6 +13,9 @@
 \usepackage{amsthm}
 \usepackage{mathptmx}
 \usepackage{todonotes}
+\usepackage{listings, lstcoq}
+\lstset{language=Coq}
+
 \newcommand{\concat}{\ensuremath{+\!\!\!\!+\,}}  
 
 \newtheorem{theorem}{Theorem}[section]
@@ -55,6 +58,13 @@ preserved.
 \end{abstract}
 
 \input{intro}
+\input{cbn}
+\input{cem}
+\input{cesm}
+\input{assembly}
+\input{applications}
+\input{discussion}
+\input{conclusion}
 
 \section{Acknowledgments}
 Sandia is a multiprogram laboratory operated by Sandia Corporation, a Lockheed Martin Company, for the United States Department of Energy’s National Nuclear Security Administration under contract DE-AC04-94AL85000.

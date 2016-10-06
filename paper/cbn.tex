@@ -36,7 +36,23 @@ relationship to machine code, keeping the heap in tact as a global entity, in
 contrast to existing fixes to this issue \cite{?}. The fixed semantics are shown
 in Figure~\ref{cbnfixed}.
 
-We expand the notion of a configuration being well formed to include  
+An important property in the proof of bisimulation will be \emph{well-formed}
+property. We use the definition directly of Ariola et al., namely that every
+term in the heap is \emph{closed to the left}, that is, the free variables of a
+term in the heap are in the domain of the heap to the left of said term. In
+addition, the term being evaluated is closed under the reachable heap, and all
+domain variables are unique with respect to both the reachable and unreachable
+heaps. 
+
+For simplicity of formalization, we choose to follow the convention of Ariola et
+al. that when we bind a new variable to a new term in the heap, we ensure that
+that variable is fresh with respect to both the heap and the term we will be
+substituting into.  This prevents reasoning directly about garbage collection
+or re-use of heap locations. We will return to this issue in the discussion
+section, but it is worth keeping in mind throughout the paper that relaxing the
+freshness constraint to being fresh with respect to \emph{live} or
+\emph{reachable} heap locations should be possible, and is an interesting
+opportunity for future work. 
 
 \subsection{Call-by-name}
 A crucial property of call-by-need is that it is an optimized implementation of
