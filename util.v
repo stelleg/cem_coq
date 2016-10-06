@@ -564,17 +564,24 @@ H. subst. specialize (n0 eq_refl). inversion n0. apply IHh. assumption. Qed.
 
 Lemma lookup_inpair {A} : ∀ x h, unique (domain h) → 
   (∀ a:A, In (x,a) h ↔ lookup x h = Some a). 
-intros. split; prep_induction h; induction h; intros. inversion H0. destruct a. destruct (eq_nat_dec x n).
-subst. unfold lookup. simpl. rewrite <- beq_nat_refl. simpl in H0. destruct H0.
-inversion H0. subst. reflexivity. inversion H. subst. apply in_domain_pair in
-H0. apply H3 in H0. inversion H0. unfold lookup. simpl. assert (n0':=n0). rewrite <-
-beq_nat_false_iff in n0.  rewrite n0. apply IHh. inversion H. assumption. unfold
-In in H0. destruct H0. inversion H0. subst. specialize (n0' eq_refl). inversion
-n0'. assumption. simpl. inversion H0. destruct a. inversion H. subst. simpl in *. destruct
-(eq_nat_dec x n). subst. unfold lookup in H0. simpl in H0. rewrite
-<- beq_nat_refl in H0. inversion H0. subst. apply or_introl. reflexivity. apply
-or_intror. unfold lookup in H0. rewrite <- beq_nat_false_iff in n0. simpl in H0.
-rewrite n0 in H0. apply IHh. assumption. assumption. Qed.  
+intros. split; prep_induction h; induction h; intros. inversion H0. destruct a.
+destruct (eq_nat_dec x n).  subst. unfold lookup. simpl. rewrite <-
+beq_nat_refl. simpl in H0. destruct H0.  inversion H0. subst. reflexivity.
+inversion H. subst. apply in_domain_pair in H0. apply H3 in H0. inversion H0.
+unfold lookup. simpl. assert (n0':=n0). rewrite <- beq_nat_false_iff in n0.
+rewrite n0. apply IHh. inversion H. assumption. unfold In in H0. destruct H0.
+inversion H0. subst. specialize (n0' eq_refl). inversion n0'. assumption. simpl.
+inversion H0. destruct a. inversion H. subst. simpl in *. destruct (eq_nat_dec x
+n). subst. unfold lookup in H0. simpl in H0. rewrite <- beq_nat_refl in H0.
+inversion H0. subst. apply or_introl. reflexivity. apply or_intror. unfold
+lookup in H0. rewrite <- beq_nat_false_iff in n0. simpl in H0.  rewrite n0 in
+H0. apply IHh. assumption. assumption. Qed.  
+
+Lemma lookup_e_inf {a} : ∀ k (v:a) h, lookup k h = Some v → ∃ h1 h2, h = h1 ++ (k,v) :: h2. 
+intros. induction h. inversion H. unfold lookup in H. simpl in H. destruct a0.
+simpl in H. destruct (beq_nat k n) eqn:bkn. inversion H. subst. apply
+beq_nat_true in bkn. subst. exists [], h.  reflexivity. apply IHh in H. destruct
+H. destruct H. subst. exists ((n, a0) :: x), x0. reflexivity. Qed. 
 
 Definition eq_dec (a :Type) := ∀ x y : a, {x = y} + {x ≠ y}. 
 

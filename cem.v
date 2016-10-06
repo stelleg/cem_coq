@@ -11,10 +11,8 @@ Record closure : Type := close {
   clos_env : nat
 }.
 
-Inductive cell : Type :=
-  | cl : closure → nat → cell.
-
-Definition clclose (c: cell) : closure := match c with cl c e => c end.
+Inductive cell : Type := cl : closure → nat → cell.
+Definition clclose : cell → closure := λ c, match c with cl c' e => c' end.
 
 Definition heap := Map nat cell.
 
@@ -36,10 +34,10 @@ Notation " ⟨ Υ , b , Φ & Ψ ⟩ N " := (conf (Φ ++ b :: Υ) Ψ N) (at level
 
 (* cactus lookup: lookup deBruijn index i at location x in heap h yields
 location y *)
-Inductive cactus_lookup : nat → nat → heap → nat → Prop :=
-  | zero : forall x Φ M Υ, cactus_lookup 0 x (Φ ++ (x ↦ M) :: Υ) x
-  | pred : forall x y z Φ M Υ i, cactus_lookup i x Φ z → 
-            cactus_lookup (S i) y (Φ ++ (y ↦ cl M x):: Υ) z.
+Inductive cactus_lookup : nat → nat → heap → nat * cell → Prop :=
+  | zero : forall x Φ Υ c,  cactus_lookup 0 x (Φ ++ (x ↦ c) :: Υ) (x,c)
+  | next : forall x y Φ c Υ i p, cactus_lookup i x (Φ ++ (y ↦ cl c x) :: Υ) p → 
+            cactus_lookup (S i) y (Φ ++ (y ↦ cl c x):: Υ) p.
 
 Fixpoint clu (v env:nat) (h:heap) : option (nat * closure) := match lookup env h with
   | None => None
@@ -120,6 +118,87 @@ e' :: Ψ) = Some x) (cl c0 n0)) in Heqo. destruct Heqo. apply lookup_domain in H
 domain_inf with (m':=cl c' e') in H1. apply in_domain_lookup in H1. destruct
 H1. rewrite e0 in Heqo0. inversion Heqo0. inversion H. Qed. 
 
+Lemma cactus_lookup_trans : ∀ x e h n c e' y p, 
+  cactus_lookup x e h (n, cl c e') →
+  cactus_lookup y e' h p →
+  cactus_lookup (S x + y) e h p.
+intros. remember (n, cl c e'). induce H. inversion Heqp0. subst.
+clear Heqp0. simpl. apply next in H0.  assumption. simpl in *. specialize
+(IHcactus_lookup _ _ _ _ _ eq_refl H0). apply next in
+IHcactus_lookup. assumption. Qed. 
+
+Lemma next' : ∀ x e h p, 
+  cactus_lookup (S x) e h p ↔ ∃ c e', cactus_lookup 0 e h (e, cl c e')   
+                                    ∧ cactus_lookup x e' h p. 
+split; intros. 
+- inversion H. subst. induce H1. inversion H. subst. inversion H4.
+  subst. exists c1, x. split. rewrite H0. constructor. constructor. inversion H.
+  subst. rewrite H3 in H5. exists c1, x0. split. constructor. rewrite H3.
+  assumption. 
+- destruct H. destruct H. destruct H. induce H0. inversion H. subst. apply
+  next. rewrite H0. constructor. inversion H. subst. apply next. rewrite H1.
+  apply IHcactus_lookup with (x0:=c). constructor. Qed.
+
+Lemma cactus_lookup_minus : ∀ x e h y p, 
+  cactus_lookup (S x) e h p → y <= x →
+  ∃ n c e', cactus_lookup (x - y) e h (n, cl c e') ∧
+            cactus_lookup y e' h p. 
+intros. apply next' in H. destruct H. destruct H. destruct H. induce H1.
+inversion H0. subst. inversion H. subst. simpl. exists e, x0, x. split.
+constructor. rewrite H1. constructor. inversion H. subst. specialize
+(IHcactus_lookup y (pred y0) c (zero _ _ _ _)). apply Le.le_pred in H0. simpl in
+H0. destruct H0. destruct IHcactus_lookup with. simpl. inversion H. nduction y.
+subst. apply next' in H.  destruct H. destruct H. destruct H. inversion H.
+subst. induction x. destruct (x
+- y) eqn:xy. rewrite NPeano.Nat.sub_0_le in xy. assert (x=y). apply
+  Le.le_antisym; auto. subst. induction H. subst. destruct p. clear H0 xy.
+induction H. apply cactus_lookup_trans in H with (x:=0) (e:=e) (n:=n) (c:=c).
+subst. destruct p. destruct c. inversion H.  subst. exists n, c, x. split;
+auto. induce H2. inversion H4. subst. apply zero. inversion H. subst.
+remember (S x). induce H. inversion Heqn. inversion Heqn. subst.
+ 
+
+
+
+Lemma clu_cactus_lookup : ∀ x e h n c, clu x e h = Some (n, c) → ∃ e', 
+  cactus_lookup x e h (n, cl c e').
+induction x; intros. inversion H. destruct (lookup e h) eqn:lue. destruct c0.
+exists n0. inversion H1. subst. apply lookup_e_inf in lue. destruct lue.
+destruct H0. subst. inversion H1. subst.  constructor. inversion H1. inversion
+H. destruct (lookup e h) eqn:lueh. destruct c0. apply IHx in H1. apply
+lookup_e_inf in lueh. destruct lueh. destruct H0.  subst. destruct H1. exists
+x2. apply next in H0. assumption. inversion H1. Qed.
+
+Lemma cactus_lookup_clu : ∀ x e h n c e', unique (domain h) → 
+  cactus_lookup x e h (n, cl c e') → clu x e h = Some (n, c). 
+intros. simpl in *. remember (n, cl c e'). induce H0. inversion
+Heqp. subst. simpl. rewrite lookup_inf; auto. simpl. destruct c eqn:ce.  rewrite
+lookup_inf. apply IHcactus_lookup. destruct c0. simpl. rewrite lookup_inf.
+destruct c eqn:ce. apply IHcactus_lookup. assumption.  assumption. Qed. 
+
+Lemma clu_next : ∀ x e h l c,
+  clu (S x) e h = Some (l, c) →
+  ∃ l' c', clu x e h = Some (l', c') 
+       ∧ lookup l' h = Some (cl c' l).
+intros. induction x. inversion H. destruct (lookup e h) eqn:eh. destruct c0.
+destruct (lookup n h) eqn:nh. destruct c1. inversion H1. subst. exists e, c0.
+simpl. rewrite eh. auto. inversion H1. inversion H1. inversion H. destruct
+(lookup e h) eqn:lu. destruct c0. destruct (lookup n h) eqn:lun. destruct c1.
+ubst. 
+
+Lemma clu_minus : ∀ x y e h p, 
+  clu x e h = Some p →
+  ∃ p', clu (x - y) e h = Some p'. 
+induction y; intros. exists p. rewrite <- Minus.minus_n_O. assumption. apply IHy
+in H. destruct H. generalize dependent p. generalize dependent e. generalize
+dependent h. generalize dependent x0. induction (x - y) eqn:xy; intros. exists x0. rewrite
+NPeano.Nat.sub_0_le in xy. apply Le.le_trans with (n:=x) (m:=y) (p:=S y) in xy.
+rewrite <- NPeano.Nat.sub_0_le in xy. rewrite xy. assumption. apply Le.le_n_Sn.
+apply IHn with (x0:=x0). . assert (x - S y = 0).
+destruct y; exists p; assumption. inversion H. destruct (lookup e h) eqn:lue.
+destruct c. induction y. simpl. exists p. assumption.
+destruct IHy. rewrite inversion H0. destruct y. try (inversion H1).  apply IHx with (y:=y) in H1. . 
+
 Lemma closed_under_inf' : ∀ c c' c'' e x Ψ Φ, closed_under c (Φ ++ x ↦ cl c' e :: Ψ) →
   closed_under c (Φ ++ x ↦ cl c'' e :: Ψ).
 intros. unfold closed_under. unfold closed_under in H. destruct c.  
@@ -130,8 +209,8 @@ intros. destruct H0. destruct H0. apply clu_inf with
 (c':=c'') in H0. destruct H0. destruct x2. exists x0, (close
 clos_tm1 clos_env1).  assumption. assumption. Qed.
 
-Lemma closed_under_inf_eq : ∀ c c' c'' e x Ψ Φ, closed_under c (Φ ++ x ↦ cl c' e
-:: Ψ) ↔ closed_under c (Φ ++ x ↦ cl c''  e :: Ψ).
+Lemma closed_under_inf_eq : ∀ c c' c'' e x Ψ Φ, closed_under c (Φ ++ x ↦ cl c' e :: Ψ) 
+  ↔ closed_under c (Φ ++ x ↦ cl c''  e :: Ψ).
 split; apply closed_under_inf'. Qed.
 
 Lemma well_formed_heap_has_unique_domain : ∀ h, well_formed_heap h → unique (domain h).
@@ -440,7 +519,7 @@ intros. induction H0.
   rewrite for_in_iff in *. rewrite for_in_iff in H. intros. simpl in H. 
   destruct x. unfold clu. unfold lookup. simpl. rewrite <- beq_nat_refl.  exists
   f, (close N e). split; auto. specialize (H x). destruct H. assert (x =
-  Peano.pred (S x)). auto. rewrite H.  apply in_map. rewrite remove_not_in.
+  Peano.next (S x)). auto. rewrite H.  apply in_map. rewrite remove_not_in.
   apply H2. auto. destruct H. unfold clu. unfold lookup. simpl.  rewrite <-
   beq_nat_refl. unfold clu in H. exists x0, x1. apply clu_cons. destruct H0.
   unfold isfresh in x2. unfold isfresh. unfold not.  intros. apply x2.  rewrite

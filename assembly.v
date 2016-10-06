@@ -26,3 +26,4 @@ Inductive Instr : Type :=
   | halt : Instr.
 
 Definition Program := Map Ptr Instr.
+Definition Heap := Map Ptr Word. 

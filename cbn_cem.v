@@ -215,7 +215,7 @@ eq_terms_compile. assumption. split; constructor. Qed.
 Lemma eq_heaps_domains : ∀ h h' iso, eq_heaps h h' iso → related_lists (λ x y _ _,
   In (x, y) iso) (domain h) (domain h').
 intros. induction H. constructor. simpl. destruct x. destruct c. destruct y.
-simpl. destruct H. constructor; auto. assumption. Qed.
+simpl. destruct H. constructor; auto. Qed. 
 
 Lemma lu_inf' {A} : ∀ h l (c:A), lookup l h = Some c → 
   ∃ Φ Ψ, h = Φ ++ (l, c) :: Ψ.
@@ -930,15 +930,24 @@ Lemma indexofn_none_not_in : ∀ x xs, indexofn x xs = None ↔ ¬ In x xs.
 intros. unfold indexofn. unfold indexof. rewrite indexofnh_none_not_in. split;
 auto. Qed. 
 
+(*
 Fixpoint extend_heap (m:list nat) (h:cem.heap) (b:expr.tm) : cem.heap := match m with
   | [] => h
   | e::es => extend_heap (m:list nat) (h:cem.heap) (b:expr.tm) : cem.heap  
   end. 
+*)
   
-Lemma eq_terms_binding : ∀ env h b b' x c m,
-  eq_terms_rel m env h b b' →
-  eq_terms_rel [] f ((f, cem.cl c env)::h) (expr.subst x (expr.var f) b) b'.  
-intros. remember (x::m). induce H1. simpl in H. simpl.  destruct (eq_nat_dec x
+Lemma eq_terms_empty_forall : ∀ env h iso e e', 
+  eq_terms_rel [] env h iso e e' →
+  ∀ m, eq_terms_rel m env h iso e e'.
+intros env h iso e e' H. remember ([]). induce H. inversion H. simpl in H0.
+rewrite <- Minus.minus_n_O in H0. destruct (ge_dec x (length m0)). eapply
+eq_gvar with (v':=v') (cl:=cl). assumption. destruct (x >= length m0) eqn:xm0. 
+
+Lemma eq_terms_binding : ∀ env h b b' x c m f iso,
+  eq_terms_rel m env h iso b b' →
+  eq_terms_rel [] f ((f, cem.cl c env)::h) iso (expr.subst x (expr.var f) b) b'.  
+intros. remember (x::m). induce H. simpl in H. simpl.  destruct (eq_nat_dec x
 v). subst. rewrite indexofn_head in H. inversion H. subst. apply eq_gvar with
 (cl:=c). subst. rewrite indexofn_none_not_in. assumption.  rewrite lookup_head
 in H. inversion H. subst. apply eq_gvar with (cl:=c). rewrite
