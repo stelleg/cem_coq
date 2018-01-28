@@ -35,14 +35,11 @@
 \subtitle{Verified Compilation of Call-by-Need Lambda Calculus}
 
 \authorinfo{George Stelle}
-           {University of New Mexico}
-           {stelleg@cs.unm.edu}
+           {Los Alamos National Laboratory}
+           {stelleg@lanl.gov}
 \authorinfo{Darko Stefanovic}
            {University of New Mexico}
            {darko@cs.unm.edu}
-\authorinfo{Stephanie Forrest}
-           {University of New Mexico}
-           {forrest@cs.unm.edu}
 
 \maketitle
 
@@ -50,11 +47,12 @@
 We present a verified compiler that preserves call-by-need semantics when
 compiling lambda calculus into a simple assembly language. We use a recently
 developed abstract machine that implements call-by-need semantics using shared
-environments to implement and reason about the compiler. We show that the
-abstract machine ensures that the compiled assembly code bisimulates Ariola et.
-al's operational semantics. Because call-by-need is an optimization for
-call-by-name, we also show the $\beta$ reduction semantics of call-by-name are
-preserved.
+environments to implement and reason about the compiler. Proving this
+optimization requires rethinking what is meant by \emph{behaviour}
+preservation. In particular, we define a cost function for the natural
+semantics, and show that this cost is preserved through compilation. Because
+call-by-need is an optimization for call-by-name, we also show that the
+reduction semantics of call-by-name are preserved.
 \end{abstract}
 
 \input{intro}

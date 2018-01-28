@@ -1,8 +1,9 @@
 \section{Introduction}
-Compilers are an attractive target for verification because the amortized return
-on investment is high. Every time a program compiled with a verified compiler is
-run, the proof ensures that the semantics of the source language are being
-preserved through execution. 
+Compilers are an attractive target for verification in part because the
+amortized return on investment is high. Every time a program compiled with a
+verified compiler is run, the proof ensures that the semantics of the source
+language are being preserved through execution. Therefore, any reasoning done
+about the source language, formal or informal, is guaranteed to be preserved. 
 
 Existing work has focused on verifying \emph{strict}
 languages~\cite{chlipala2007certified, leroy2012compcert}, which pre-compute
@@ -18,6 +19,25 @@ non-strict languages, sharing evaluation results between instance of a variable,
 or call-by-need semantics, is implemented correctly. This turns out to be
 particularly challenging: one must reason about updating expressions with values
 in a heap. 
+
+In being forced to prove correctness of evaluation, not just results, we gain a
+very useful property: we can reason about operational properties, like time and
+memory usage, as a function of our source semantics. This enables us to reason
+about optimizations at the source level and have that reasoning be preserved to
+machine code. For example, this enables us to prove that an optimization that
+rewrites lambda terms will be a \emph{true} optimization, in the sense that it
+will only speed up the resulting program. As another example, we will show later
+that if we have a type system that we'd like to use to prove operational
+properties, e.g. a substructural type system, then we can have those properties
+provably preserved at the machine code level. 
+
+The ability to reason about operational properties of the machine code using the
+source semantics is an important one. Arguably, what one expect from a compiler
+is to implement some simple semantics, and be \emph{at least as fast} as that
+semantics. A transformation that occasionally significantly slows down a program
+should be avoided at all costs, and the tools that this paper provides are a
+step in the direction of being able to provably avoid this undesirable
+situation.
 
 Our approach is enabled by a recently developed abstract machine, the Cactus
 Environment Machine ($\mathcal{CE}$)~\cite{?}. $\mathcal{CE}$ uses a shared
@@ -68,9 +88,9 @@ Call-by-need semantics bisimulate machine semantics, and compilation
 preserves this bisimulation relation.
 \end{theorem}
 
-We'll formalize this theorem in Section 6, but the bisimulation ensures that
-we're correctly sharing the results of evaluation down to machine code. Because
-the semantics are deterministic, we get the following corollary:   
+We'll formalize this theorem in Section~\ref{sec:bisim}, but the bisimulation
+ensures that we're correctly sharing the results of evaluation down to machine
+code. Because the semantics are deterministic, we get the following corollary:   
 
 \begin{corollary}[Correct Results]
 If a term $t$ compiles to $p$, then call-by-need evaluates a term $t$ to a value
@@ -81,11 +101,10 @@ related by the bisimulation relation.
 This corollary says that we get the correct value when we execute the assembly
 program on the instruction machine. This is similar, though slightly stronger,
 to the result from~\cite{chlipala2007certified}, where Chlipala shows the first
-half of the \emph{iff}. In defense of that paper though the second half is
-implied implicitly by the fact that he's working with a total language. Note
-that our bisimulation if significantly stronger than this type of result, which
-only considers the input and output: our proof of bisimulation proves an
-equivalence of the execution paths.
+half of the \emph{iff}. Note that our bisimulation is significantly stronger
+than this type of result, which only considers the input and output: our
+bisimulation provides an equivalence of the execution paths of the source and
+machine code.
 
 In addition to the above lemma, because call-by-need is an optimization of
 call-by-name, we get the following corollary for a relation $R$ between.
@@ -111,16 +130,16 @@ the machine semantics \emph{bisimulate} the source semantics
 The bisimulation contribution is crucial: with just a proof of correct
 \emph{results}, one can't reason formally about things like memory and time
 requirements at the source level. This is doubly important for non-strict
-languages where formal reasoning about analyses such as strictness analysis
-are crucial for performance.
+languages where reasoning about time and space informally is particularly
+challenging.
 
 \subsection{Outline}
 The compiler and proofs use a number of different representations, including
 standard lambda calculus, lambda calculus with deBruijn indices, and a locally
-nameless representation. The paper proceeds by showing each transformation that
+nameless representation. The paper proceeds by describing each transformation that
 the compiler makes, along with the bisimulation relations between the semantics.
 
-Specifically, in Section 1 we cover call by need semantics, including a
+Specifically, in Section~\ref{sec:cbn} we cover call by need semantics, including a
 correction to the Ariola et. al's presentation`\cite{ariola1995call}. In Section
 2 we cover the $\mathcal{CE}$ big step semantics and it's lock-step relation to
 call-by-need.  In Section 3 we describe the $\mathcal{CE}$ small step semantics
