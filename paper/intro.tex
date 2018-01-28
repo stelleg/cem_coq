@@ -58,19 +58,16 @@ use natural numbers for variables. Our target language is a simple machine
 assembly language:
 
 \begin{align}
-  \tag{Word}   n, p &\in \mathbb{N} \\
+  \tag{Machine Word}     c &\in \mathbb{N} \\
   \tag{Registers} r &::= ip \; | \; ep \; | \; r1 \; | \; r2 \; | \; r3 \\
-  \tag{Stack}     s &::= [p] \\
-  \tag{Write Operands}  wo &::= r \; | \; r* \\
-  \tag{Read Operands}  ro &::= wo \; | \; n \\
+  \tag{Write Operands}  wo &::= r \; | \; (r+c)* \\
+  \tag{Read Operands}  ro &::= wo \; | \; c \\
   \tag{Instructions} i &::= \texttt{mov} \; ro \; wo \; 
-                       | \; \texttt{jmp} \; ro \; 
-                       | \; \texttt{inc} \; wo \;
-                       | \; \texttt{dec} \; wo \; \\
-  \notag    & \quad \; | \; \texttt{new} \; wo \;
+                       | \; \texttt{new} \; wo \;
                        | \; \texttt{push} \; ro \; 
                        | \; \texttt{pop} \; wo \\
-  \tag{Program}   p &::= [i]
+  \tag{Basic Block} bb &::= i : bb \; | \;  \texttt{jmp} \; ro \; \\
+  \tag{Program}   p &::= [bb]
 \end{align}
 
 Our machine words are natural numbers, which can be written into registers or

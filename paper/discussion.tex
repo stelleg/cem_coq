@@ -1,0 +1,72 @@
+\section{Discussion}
+In this secion we discuss some of the implications of this work, what the strengths
+and weaknesses are, and potential future work. 
+
+Using the natural semantics of the source language to reason about cost is an area
+we are excited about extending this work. For example, incorportating substructural
+type systems that help reason about memory consumption could enable easier provably
+correct programs that are guaranteed to succeed on resource-constrained hardware. This
+could allow easier development of critical applications, easing the burden of proof as 
+well as development time. By incorporating an appropriate type system into the
+proof infrastructure given in this paper, one can imagine a system where a
+program that type-checks comes implicitly with a proof that the compiled
+program \emph{truly cannot go wrong}, i.e. it cannot run out of time or memory. 
+
+Another straightforward extension to this work would be extending it to implement the
+Haskell language. As we discussed earlier in the paper, Haskell programmers
+often implicitly rely on call-by-need semantics, so defining a compiler option
+that provably guarantees such a semantics could be valuable for many programmers. This
+would require more resources than those available to these authors, but it could make
+for a useful extension to the DeepSpec project \cite{}. It would also fill a natural hole
+in the language space, as existing call-by-value functional languages have a verified 
+compiler to use: CakeML, while those who prefer laziness by default currently have no
+options for verified compilation. It's worth noting that a more complete
+compiler to native code for this abstract machine does exist \cite{cem}. This
+would ease the burden of such a project. 
+
+\subsection{Threats to Validity} 
+There are a few threats to the validity of this paper that we wish to address
+here. The first, and strongest, is that because this is of course a
+turing-complete source language, we'd like to have the correctness theorem be
+an if and only if. That is, we'd like to say that the resulting machine code
+computes a value if and only if the source semantics do. Currently, the
+correctness theorem allows cases where the source semantics doesn't terminate,
+but the machine semantics do. Our only defense to this argument is that this is 
+a common challenge for proving correctness, and proving the implication the
+other direction is quite difficult. Existing work similarly avoids this issue, e.g. 
+\cite{chlipala}. Indeed, this is a direct result of the difficulty of reasoning
+about small-step semantics of programs without the nice induction rules given
+by natural semantics. Note that this is not an issue in the presence of total
+languages, where the source semantics will always terminate.
+
+A similar potential weakness of this paper is the choice of simple assembly
+language.  In particular, the use of infinite stack and heap sizes could be
+seen as problematic, as no machine that we're aware of has such a large memory
+capacity. Proving correctness in presence of limited stack and heap sizes would
+require adding the caveats that correctness won't be preserved in the presence
+of out-of-memory errors. We argue that our cost model helps to reason about
+these issues at the big-step source semantics, one of the contributions of this
+paper, so that heuristic runtime checks for potential out of memory errors can
+be reasoned about more easily. Valuable future work would include lowering to
+one or more verified ISA's, such as those described in \cite{compcert}. 
+
+Another thing that we chose not to do is relate the source semantics directly to an
+existing call-by-need semantics. A couple of obvious choices would have been
+Launchbury's call-by-need semantics \cite{launchbury} or the operational
+call-by-need semantics given by Ariola et al. in \cite{ariola}. While we believe this
+would be worthwhile future work, we decided against this for two reasons. The
+first, more important one, is that both of these semantics have been shown to
+be problematic upon further inspection. Brietner showed that upon machine formalization, 
+Launchbury's semantics require some small changes, while we re-discovered an issue with
+Ariola et al.'s call-by-need semantics involving freshness that complicates the
+semantics significantly, previously discovered by \cite{?}. While we could have used
+corrected versions of either, in both cases the semantics are complicated by
+their fixes, and we found relating our semantics to the more "obviously
+correct" call-by-name semantics of Curien more satisfying. The second reason is simply
+that relating two different semantics operating on two different calculi
+(standard and deBruin indices) with mutable heaps via bisimulation turns out to
+be quite challenging. Again, this relation, and formaling the relation to the
+syntactic account given by Ariola et al. would make for exciting future work.
+
+
+

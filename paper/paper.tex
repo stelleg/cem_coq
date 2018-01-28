@@ -47,12 +47,12 @@
 We present a verified compiler that preserves call-by-need semantics when
 compiling lambda calculus into a simple assembly language. We use a recently
 developed abstract machine that implements call-by-need semantics using shared
-environments to implement and reason about the compiler. Proving this
-optimization requires rethinking what is meant by \emph{behaviour}
-preservation. In particular, we define a cost function for the natural
-semantics, and show that this cost is preserved through compilation. Because
-call-by-need is an optimization for call-by-name, we also show that the
-reduction semantics of call-by-name are preserved.
+environments to implement and reason about the compiler. Proving preservation
+of laziness requires rethinking what is meant by \emph{behaviour} preservation.
+In particular, we define a cost function for the natural semantics, and show
+that this cost is preserved through compilation.  Because call-by-need is an
+optimization for call-by-name, we also show that the reduction semantics of
+call-by-name are preserved.
 \end{abstract}
 
 \input{intro}
@@ -63,9 +63,6 @@ reduction semantics of call-by-name are preserved.
 \input{applications}
 \input{discussion}
 \input{conclusion}
-
-\section{Acknowledgments}
-Sandia is a multiprogram laboratory operated by Sandia Corporation, a Lockheed Martin Company, for the United States Department of Energy’s National Nuclear Security Administration under contract DE-AC04-94AL85000.
 
 % We recommend abbrvnat bibliography style.
 \bibliographystyle{abbrvnat}
