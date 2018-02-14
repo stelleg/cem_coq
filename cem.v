@@ -66,7 +66,7 @@ Definition well_formed (c : configuration) : Prop := match c with
   end.
 
 Reserved Notation " c1 '⇓' c2 " (at level 50).
-Inductive step : configuration → configuration → Prop :=
+Inductive step : configuration → configuration → Type :=
   | Id : ∀ M B x y z Φ Ψ Υ v e, clu v z (Υ ++ x ↦ {M,y} :: Φ) = Some (x, M) → 
             ⟨Φ, (x ↦ {M,y}), Υ⟩M ⇓ ⟨Ψ, (x ↦ {M,y}), Υ⟩close (:λB) e →
     ⟨Φ, x ↦ {M, y}, Υ⟩close (var v) z ⇓ ⟨Ψ, x ↦ {close (:λB) e, y}, Υ⟩close (:λB) e
@@ -77,9 +77,27 @@ Inductive step : configuration → configuration → Prop :=
               ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩close (:λB') ae
 where " c1 '⇓' c2 " := (step c1 c2).
 
-Definition configuration' := sig well_formed.
-Definition step' (c1 c2: configuration') : Prop := match (c1, c2) with
-  | (exist c1 _, exist c2 _) => step c1 c2 end.
+Fixpoint time_cost {c1 c2} (s : step c1 c2) : nat := match s with 
+  | Id _ _ _ _ _ _ _ _ _ _ lu e => 1 + time_cost e
+  | Abs _ _ _ => 0
+  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 1 + time_cost m + time_cost b
+  end. 
+
+Fixpoint stack_cost {c1 c2} (s : step c1 c2) : nat := match s with
+  | Id _ _ _ _ _ _ _ _ _ _ lu e => 1 + stack_cost e
+  | Abs _ _ _ => 0
+  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 1 + max (stack_cost m) (stack_cost b)
+  end.
+
+Fixpoint heap_cost {c1 c2} (s : step c1 c2) : nat := match s with
+  | Id _ _ _ _ _ _ _ _ _ _ lu e => heap_cost e
+  | Abs _ _ _ => 0
+  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 1 + heap_cost m + heap_cost b
+  end.
+
+Definition configuration' := sigT well_formed.
+Definition step' (c1 c2: configuration') : Type := match (c1, c2) with
+  | (existT _ c1 _, existT _ c2 _) => step c1 c2 end.
 
 Lemma well_formed_inf : ∀ c x c' n  Φ Υ, 
   well_formed (⟨Φ, x ↦ cl c' n, Υ⟩c) → 

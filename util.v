@@ -1,8 +1,8 @@
 (* General utility file, should break up into smaller modules, e.g. Maps, Sets,
 etc. *)
 
-Require Import List Basics EqNat Logic.Decidable.
-Require Import Arith.Peano_dec.
+Require Import List Basics Logic.Decidable.
+Require Export EqNat Arith.Peano_dec.
 Require Import CpdtTactics.
 Require Import Logic.ProofIrrelevance.
 Require Import Unicode.Utf8.
@@ -11,6 +11,10 @@ Require Import Compare_dec.
 Definition Map a b := list (a * b).
 
 Lemma wrap : forall A B (f:A -> B), f = fun a:A => f a. auto. Qed.  
+
+Inductive nth {a : Type} : nat → list a → a → Prop := 
+  | NZ : ∀ x xs, nth 0 (cons x xs) x
+  | NI : ∀ i x xs y, nth i xs y → nth (S i) (cons x xs) y.
 
 Fixpoint subset {A} (l : list A) (m: list A) : Prop := match l with
   | nil => True

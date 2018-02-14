@@ -12,17 +12,28 @@ Inductive Reg :=
   | R2
   | R3.
 
-Inductive Op : Type :=
-  | word : Word → Op
-  | new : Op
-  | read : Ptr → Op
-  | write : Ptr → Reg → Op
-  | sub : Reg → Reg → Op
-  | add : Reg → Reg → Op.
+Inductive WO := 
+  | WR : Reg → WO
+  | WM : Reg → nat → WO.
+
+Coercion WR : Reg >-> WO.
+Infix "%" := WM (at level 30).
+
+Inductive RO := 
+  | RW : WO → RO
+  | RC : nat → RO.
+
+Coercion RW : WO >-> RO.
+Coercion RC : nat >-> RO.
 
 Inductive Instr : Type :=
-  | op : Reg → Op → Instr → Instr
-  | jump : Ptr → Instr
-  | halt : Instr.
+  | push : RO → Instr
+  | pop : WO → Instr
+  | new : nat → WO → Instr 
+  | mov : RO → WO → Instr.
 
-Definition Program := Map Ptr Instr.
+Inductive BasicBlock : Type :=
+  | instr : Instr → BasicBlock → BasicBlock
+  | jump : option (RO*Ptr) → RO → BasicBlock.
+
+Definition Program := list BasicBlock.

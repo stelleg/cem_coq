@@ -7,7 +7,7 @@ Require Import util expr_db db_assembly.
 main theorems of correctness *)
 
 Definition compile (t : expr.tm) : option assembly.Program := match db t nil with
-  | Some a => Some (assemble a)
+  | Some a => Some (assemble a 0)
   | None => None 
   end.
 
