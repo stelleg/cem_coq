@@ -1,0 +1,103 @@
+\section{Discussion}
+
+Now that we've covered how the verified compiler works, and gone over some of
+the ways which we can utilize the the verification, we use this section to
+discuss threats to validity, future work, and related work. 
+
+\subsection{Threats to Validity}
+
+One threat common to all machine-verified work is the verification of the
+verifier. This paper has the special position insofar as it could lend itself to
+the verification of Coq itself. One of the requirements for verifying that Coq
+itself is correct is verifying that the evaluation/reduction of Coq terms is
+correct. While full Beta reduction is often employed, weak noramalization
+methods such are also employed \cite{?}.  
+
+Another potential qualm with this paper would be that we haven't presented any
+performance numbers. That is to say, we have given no evidence that the
+performance of this abstract machine isn't abysmal. For that, we point to
+previous work \cite{?}, showing that with some extra effort, there's a chance
+that this approach could perform at the level of optimizing compilers such as
+GHC. That said, we don't plan to implement the barrage of optimizations that
+standard compilers employ. Instead, we aim to give the programmer tools to
+\emph{reason} about performance of the resulting code, something that many
+optimization passes inhibit with the goal of producing fast code at any cost. 
+
+A third threat to validity is with regards to our claim that one can "reason
+about performance". In fact, we have only given tools to reason about \emph{number of
+instructions}, which is a meager approximation of performance at best.
+Unfortunately, hardware is so sophisticated and opaque that full reasoning about
+performance is impossible. Features like sophisticated branch prediction,
+proprietary memory controllers, etc. prevent any formal reasoning about actual
+number of cycles to perform a computation.  
+
+Another worrying aspect of this paper is that any reasoning about time and space
+requirements of the assembly code is dependent on reasoning about the big step
+semantics of call-by-need, which is notoriously difficult. We admit to this as a
+weakness of the current paper, and discuss the need for tools for reasoning
+about lazy time and space requirements in the next subsection.
+
+\subsection{Future work}
+
+There are many aspects of the paper that beg further work. One obvious one is to
+close the gap between the abstract assembly machine and actual hardware
+implementations such as x64, ARM, and MIPS. A valuable addition to this line of
+work would be a proper register allocator; something which this work does not
+address. A third avenue in thes vein would be to add IEEE primitive literals and
+operations to the language, as done in \cite{?}, and verify their correctness.
+
+As mentioned in the previous subsection, while this work gives formal ability to
+reason about performance of the resulting code, it requires reasoning about
+call-by-need semantics to do so, which is challenging at best, nigh impossible
+at worst \cite{?}. We that this problem is made even worse by optimizing
+compilers for lazy languages, like GHC. Indeed, optimizations like the
+full-laziness-transformation can lead to worse-performing code. A verified
+compiler like this one presents the opportunity to verify rewrite rules and
+optimizations, potentially in a way that preserves some specified source
+language semantics. For example, if some form of substructural type system was
+utilized, e.g. linear types, one could reason about optimizations dependent on
+linear types at the source level and have that reasoning be preserved through to
+machine code.
+
+A third exciting area for future work is the implementation of \emph{verified
+optimizations}. Because have have the ability to reason about the effect that
+any transformation will have on the number of machine instructions that will be
+executed, we can reason about when an optimization is \emph{gauranteed} to
+improve performance. As mentioned above, there are existing "optimizations" that
+occasionally hurt performance. A verified compiler provides a framework in which
+we can verify that our optimizations will never hurt performance. 
+
+
+\subsection{Related Work}
+
+Here we'll focus mostly on how this work relates to other verified compilers. In
+a sense, the job is an easy one: all other verified compilers of functional
+languages differ in two important ways: 
+
+\begin{itemize}
+\item They are implemented for strict languages
+\item They only prove correctness of results, not correctness of process to get
+results
+\end{itemize}
+
+The two points are related. As we suggested earlier, while for a strict language
+there aren't any reasonable operational semantics that have disastrous
+consequences for runtime. In contrast, non-strict languages have two perfectly
+reasonable implementations, call-by-name and call-by-need, where call-by-name is
+often exponentially slower than the call-by-need, as in the \texttt{fibs}
+example given earlier. For this reason, it's important to verify the asymptotic
+performance of our compiler, and we therefore guarantee that it implements
+call-by-need. 
+
+For these reasons, all existing works only verify the results of a computation.
+Chlipala has shown that verified compilation can preserve types and semantics
+through transformations such as CPS \cite{chlipala}. Chlipala has also shown
+that one can add mutable references and exceptions to achieve a verified
+compiler for an impure functional language \cite{chlipalaimpure}.  
+
+There has also been some recent work on unverified reasoning about time and
+space requirements for a compiler. Hoffman et al. show how to automatically
+compute polynomial resource bounds for first order programs
+~\cite{hoffmanresource}. 
+
+

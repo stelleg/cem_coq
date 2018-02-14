@@ -1,0 +1,19 @@
+\section{Conclusion}
+
+We have shown how to build a verified compiler using bisimulation that verifies
+time and space requirements in addition to the usual correctness properties. We
+have used this technique to build a verified compiler of call-by-need, proving
+that the memoization of results is implemented correctly. This is the first
+machine-checked proof that an optimization is \emph{preserved through
+compilation} that we are aware of. While we haven't proved that the memoization
+of results is a true optimization, and it likely isn't in general, we have built
+a framework where that sort of reasoning is possible, a significant achievement. 
+
+Typed functional language programmers have long leaned on the important property
+that their programs "can't go wrong". Historically this property must always
+include an important asterisk: "unless it runs out of memory". Without tools to
+reason formally about memory usage this asterisk is impossible to confront. We
+have shown how one can reason formally about properties like stack size and heap
+size, in a way that is preserved to machine code, enabling programmers to
+finally manage this wart.
+

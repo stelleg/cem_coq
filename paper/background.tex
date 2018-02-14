@@ -1,0 +1,115 @@
+\section{Background and Motivation} \label{sec:back}
+
+This section provides relevant background for the $\mathcal{CE}$ machine,
+outlining lambda calculus, evaluation strategies, and Curien's calculus of
+closures.
+
+\subsection{Preliminaries}
+
+We begin with the simple lambda calculus ~\cite{barendregt1984lambda}:  $$ t::= x
+\; | \;  \lambda x.t \; | \;  t \; t $$ where $x$ is a variable, $\lambda x.t$
+is an abstraction, and $t \; t$ is an application. We also use lambda calculus
+with deBruijn indices, which replace variables with a natural number indexing
+into the binding lambdas.  This calculus is given by the syntax: $$ t::= i \; |
+\; \lambda t \; | \; t \; t $$ where $i \in \mathbb{N}$. In both cases, we use
+the standard Barendregt syntax conventions, namely that applications are left
+associative and the bodies of abstractions extend as far as possible to the
+right ~\cite{barendregt1984lambda}.  A \emph{value} in lambda calculus refers to
+an abstraction. We are concerned only with evaluation to weak head normal form
+(WHNF), which terminates on an abstraction without entering its body.
+
+In mechanical evaluation of expressions, it would be too inefficient to perform
+explicit substitution. To solve this, the standard approach uses closures
+~\cite{landin1964mechanical,curien1991abstract,jonesstg,biernacka2007concrete}.
+Closures combine a term with an environment, which binds the free variables in
+the term to closures. 
+
+For a formal basis for closures, we use Curien's calculus of
+closures~\cite{curien1991abstract}, given in Figure~\ref{fig:calcclos}.  It is a
+formalization of closures with an environment represented as a list of closures,
+indexed by deBruijn indices. We will occasionally modify this calculus by
+replacing the deBruijn indices with variables for readability, in which case
+variables are looked up in the environment instead of indexed, e.g., $t[x = c, y
+= c'])$ ~\cite{barendregt1984lambda}. We also add superscript and subscript
+markers to denote unique syntax elements, e.g., $t', t_1 \in \textnormal{Term}$. 
+
+\subsection{Evaluation Strategies} \label{sec:eval}
+
+There are three standard evaluation strategies for lambda calculus:
+call-by-value, call-by-need, and call-by-name.  Call-by-value evaluates every argument
+to a value, whereas call-by-need and call-by-name only evaluate an argument if
+it is needed.  If an argument is needed more than once, call-by-name re-computes
+the value, where call-by-need memoizes the value, so it is computed at most once.
+Thus, call-by-need attempts to embody the best of both worlds---never repeat
+work (call-by-value), and never perform unnecessary work (call-by-name). These
+are intuitively \emph{good} properties to have, and we illustrate the
+correctness of such an intuition with the following example, modified from
+~\cite{danvy2013synthetic}:
+
+$$ \overbrace{c_m (c_m (\cdots(c_m}^{m} \; id \; \overbrace{id)\cdots) id)}^{m} \; true \; id
+\; bottom $$ where $c_n = \lambda s.\lambda z.\overbrace{s \; (s \cdots (s}^{n}
+\; z) \cdots) $, $true = \lambda t.\lambda f.t$, $id=\lambda x.x$, and $bottom =
+(\lambda x.x \; x) \lambda x.x \; x$. Call-by-value never terminates,
+call-by-name takes exponential time, and call-by-need takes only polynomial time
+~\cite{danvy2013synthetic}. Of course, this is a contrived example, but it
+illustrates desirable properties of call-by-need.
+
+In practice, however there are significant issues with call-by-need evaluation.
+We focus on the following: \emph{Delaying a computation is slower than
+performing it immediately.} This issue is well known
+\cite{johnsson1984efficient,jonesstg}, and has become part of the motivation
+for \emph{strictness analysis}
+\cite{mycroft1982abstract,wadler1987projections}, which transforms non-strict
+evaluation to strict when possible.
+
+\subsection{Existing Call-by-Need Machines}
+
+Diehl et al. ~\cite{diehl2000abstract} review the call-by-need
+literature in detail.  Here we summarize the most relevant points.
+
+The best known machine for lazy evaluation is the Spineless Tagless
+G-Machine (STG machine), which underlies the Glasgow Haskell Compiler (GHC). 
+STG uses flat environments that can be allocated on the stack, the heap,
+or some combination ~\cite{jonesstg}.  
+
+Two other influential lazy evaluation machines relevant to the $\mathcal{CE}$
+machine are the call-by-need Krivine machines
+~\cite{lkm,krivine2007call,sestoft}, and the three-instruction machine (TIM)
+~\cite{TIM}.  Krivine machines started as an approach to call-by-name
+evaluation, and were later extended to call-by-need
+~\cite{krivine2007call,sestoft,danvy2013synthetic,lkm}.  The $\mathcal{CE}$
+modifies the lazy Krivine machine to capture the environment sharing given by
+the cactus environment. The TIM is an implementation of call-by-need and
+call-by-name ~\cite{TIM}.  It involves, as the name suggests, three machine
+instructions, \texttt{TAKE}, \texttt{PUSH}, and \texttt{ENTER}. In
+Section~\ref{sec:impl}, we follow Sestoft ~\cite{sestoft} and
+re-appropriate these instructions for the $\mathcal{CE}$ machine.
+
+There has also been recent interest in \emph{heapless} abstract
+machines for lazy evaluation. Danvy et al. ~\cite{danvy2012inter} and
+Garcia et al. ~\cite{garcia2009lazy} independently derived similar
+machines from the call-by-need lambda calculus
+~\cite{ariola1995call}. These are interesting approaches, but it is not yet
+clear how these machines could be implemented efficiently.
+
+\subsection{Verification}
+There has been much recent work on machine verified compilers. This paper
+addresses two holes in the literature: 
+\begin{itemize}
+\item Verification of a non-strict compiler
+\item Verification of time and space requirements of the machiine code 
+\end{itemize}
+Existing verified compilers have focused on verification of \emph{results},
+without support for verification of operational properties, such as number of
+instructions or amount of space. We argue that in the context of functional
+languages, where optimizations often change asymptotic time and space behaviour,
+this kind of reasoning ability is very attractive. It also opens the possibility
+of reasoning about programs that \emph{really} can't go wrong: the verified
+compiler potentially transforming a proof that the input program will terminate
+in some specified number of reductions and heap space into the compiled program.
+
+It also sets the stage for enabling verified optimizations, in the sense that
+one could reason about whether or not optimizations at the source level
+verifiably optimize the time and/or space at the machine code level, in addition
+to the more standard proof that they retain the semantics of the input program. 
+
