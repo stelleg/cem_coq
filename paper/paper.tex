@@ -53,11 +53,10 @@ compiling lambda calculus into a simple assembly language. We use a recently
 developed abstract machine that implements call-by-need semantics using shared
 environments to implement and reason about the compiler. We show that the
 abstract machine ensures that the compiled assembly code implements a
-call-by-need natural semantics. In addition to a proof that the memoization of
-results is correct, the bisimulation gives us tools for reasoning about time and
-space requirements of the machine code. Because call-by-need is an optimization
-for call-by-name, we also show the $\beta$ reduction semantics of call-by-name
-are preserved.
+call-by-need natural semantics. In addition to the standard proof of correct
+results, we prove time complexity is preserved, ensuring that memoization.
+Because call-by-need is an optimization for call-by-name, we also show the
+$\beta$ reduction semantics of call-by-name are preserved.
 \end{abstract}
 
 \input{intro}

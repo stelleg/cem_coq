@@ -2,11 +2,8 @@
 
 Now that we've seen how the compiler preserves the semantics of the source
 language, we can look at what sorts of tools this gives us for reasoning about
-the output of the compiler. The basic idea is as follows: because of the
-strength of the bisimulation relation, almost all reasoning about the source
-semantics is preserved through to the resulting binary. This includes properties
-like runtime, heap usage, stack size, types, and of course, correctness of
-the results.
+the output of the compiler. This includes properties like runtime, heap usage,
+stack size, types, and of course, correctness of the results.
 
 \subsection{Time}
 
@@ -54,9 +51,9 @@ how we do formal reasoning about programs in practice, and when building a
 compiler, we'd like to make sure this reasoning is preserved to machine code.
 Chlipala showed elegantly how types can be provably preserved through
 compilation of simply typed strict lambda calculus in \cite{?}. While this paper
-has focused on untyped lambda calculus, we use this section to show how the
-strength of the bisimulation proof ensures that any type-based reasoning will be
-preserved through evaluation.  
+has focused on untyped lambda calculus, we use this section to show how one
+could extend this work to show that type-based reasoning will be preserved
+through evaluation.  
 
 Unfortunately, because we've already fixed our term syntax to be untyped, we
 cannot do this reasoning within the common context of explicitly typed
@@ -106,8 +103,8 @@ Theorem assembly_preserves : ∀ t tau p s v,
 In words, this means that if our source term has type \texttt{tau} and
 succesfully compiles (likely that typechecking would imply succesful compilation,
 but we don't require it), and the compiled program \texttt{p} evaluates to some
-machine state \texttt{s}, then any term related by our bisimulation relation
-will also have type \texttt{tau}.
+machine state \texttt{s}, then any term related by our correctness relation will
+also have type \texttt{tau}.
 
 \subsection{Space}
 
@@ -120,8 +117,9 @@ Generally there are two ways space computations can fail: the one we will focus
 on currently is stack overflow. Stack overflows occur when the maximum allocated
 stack space is exceeded. This kind of failure is ubiquitous and hard to reason
 about. It is the cited cause of failures and even deaths in the case of Toyota's
-unintended acceleration case. We show how using the bisimulation proof, we can
-prove that stack overflows won't happen given an input program. 
+unintended acceleration case \cite{?}. We show how reasoning about stack size at
+the source semantics can be preserved through to machine code, potentially
+preventing this kind of failure.  
 
 Reasoning about heap space is a bit more difficult currently. This is
 because we build on the call-by-need semantics that ensures variables are fresh
@@ -136,7 +134,7 @@ about heap space is preserved through to the machine code.
 
 \subsection{Programs that \emph{Really} Can't Go Wrong}
 
-Typed functional language programmers often lean on the fact that their programs
+Typed functional language programmers often tout on the fact that their programs
 "can't go wrong". This important property of typed functional languages is
 hampered by an asterisk: "unless it runs out of memory".  The previous sections
 on formal reasoning about time and space requirements using this verified

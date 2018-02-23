@@ -1,8 +1,8 @@
 Require Import cem cesm relations List.
 Require Import Unicode.Utf8.
-Require cem.
+Require cem cesm.
 
-Notation " c1 '→_s*' c2 " := (refl_trans_clos cesm_step c1 c2) (at level 30). 
+Notation " c1 '→_s*' c2 " := (refl_trans_clos cesm.step c1 c2) (at level 30). 
 
 Definition b2s (c : configuration) : stack → state := match c with
   | conf h c => λ s, st h s c end.

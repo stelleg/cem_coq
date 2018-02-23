@@ -8,8 +8,9 @@ variable dereference. Each semantics has advantages and drawbacks, and
 increasingly programming languages are incorporating the ability to switch
 between them \cite{?}. 
 
-Our source language is Ariola et al.'s call-by-need lambda calculus \cite{?}. It
-is an untyped language with the standard lambda calculus for it's syntax: 
+One well known call-by-need semantics is Ariola et al.'s call-by-need lambda
+calculus \cite{?}. It is an untyped language with the standard lambda calculus
+for it's syntax: 
 
   $$ t := x \; | \; \lambda x . t \; | \; t \; t $$
 
@@ -28,7 +29,7 @@ address in the domain of the heap is unique, and can therefore perform incorrect
 evaluation. For an example of how it can go wrong see Figure~\ref{cbnwrong}, 
 
 To fix this problem, instead of throwing away the unreachable part of the heap
-in the Id rule, we keep it around, but separate the reachable heap from the
+in the Id rule, one can keep it around, but separate the reachable heap from the
 unreachable explicitly. We then ensure that freshness is enforced with respect
 to both the unreachable and reachable parts of the heap, preventing the issue
 described above. This fix has the additional benefit that it simplifies the
@@ -59,19 +60,9 @@ requires a lemma showing that unreachable heap locations \emph{stay}
 unreachable. Using the approach of Ariola et al. of gives us a much simpler to
 reason about approximation of reachability. 
 
-An important property in the proof of bisimulation will be \emph{well-formed}
-property. We use the definition directly of Ariola et al., namely that every
-term in the heap is \emph{closed to the left}, that is, the free variables of a
-term in the heap are in the domain of the heap to the left of said term. In
-addition, the term being evaluated is closed under the reachable heap, and all
-domain variables are unique with respect to both the reachable and unreachable
-heaps. We prove the following lemma, that well-formedness is preserved through
-evaluation: 
-
 \begin{lstlisting}
 Lemma well_formed_step : ∀ c1 c2, well_formed c1 → c1 ⇓ c2 → well_formed c2.
 \end{lstlisting}
-
 
 For simplicity of formalization, we choose to follow the convention of Ariola et
 al. that when we bind a new variable to a new term in the heap, we ensure that

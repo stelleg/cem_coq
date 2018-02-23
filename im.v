@@ -79,6 +79,14 @@ Inductive step_bb : BasicBlock → State → State → Type :=
   read ro s 0 →
   write (WR IP) k s s' → 
   step_bb (jump (Some (ro, k)) j) s s'
+  | step_jumpS : ∀ ro k j s s' l, 
+  read ro s l →
+  write (WR IP) k s s' → 
+  step_bb (jump (Some (ro, l)) j) s s'
+  | step_jump : ∀ ro k j s s' l, 
+  read ro s l →
+  write (WR IP) k s s' → 
+  step_bb (jump (Some (ro, k)) j) s s'
 .
 
 Inductive step : transition State :=

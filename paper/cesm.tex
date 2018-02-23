@@ -2,11 +2,8 @@
 
 This section describes how we define small step semantics using a stack to track
 argument closures from the \texttt{App} rule and update markers from the
-\texttt{Id} rule. This kind of transformation is likely the most well covered in
-the literature~\cite{?}. A way in which this work differs is the proof of
-\emph{bisimulation} between the two semantics, in place of a correctness of
-results. This gives us a stronger guarantee with regards to preservation of
-evaluation structure.
+\texttt{Id} rule. By defining this intermediate semantics, we ease the proof
+burden between the big-step semantics and the assembly machine semantics.   
 
 \subsection{Semantics}
 
@@ -53,27 +50,24 @@ where " c1 '→s' c2 " := (step' c1 c2).
 \caption{Small Step $\mathcal{CE}$ Semantics}
 \end{figure}
 
-\subsection{Bisimulation with Big Step $\mathcal{CE}$ Semantics}
+\subsection{Relation to Big Step $\mathcal{CE}$ Semantics}
 
-We prove bisimulation between the big-step semantics and the reflexive
+We prove that the cesm implements the big-step semantics and the reflexive
 transitive closure of the small-step semantics. The relation itself is generally
 uninteresting; the heap structure is essentially the same so we require equality
 of the heap and concatenation of the big step heaps, and we require nothing of
 the stack. Furthermore, the terms and closures are equivalent. Really, the only
-goal of this bisimulation is to show that the stack preserves the computation
+goal of this proof is to show that the stack preserves the computation
 structure.  
 
 \begin{lstlisting}
-Lemma bigstep_bisim_smallstep : cem.step ~ cesm steps. 
+Lemma bigstep_smallstep : ∀ c h v h' s, 
+  big.step (big.st c h) (big.st v h') → 
+  refl_trans_clos small.step (small.st c s h) (small.st v s h')
 \end{lstlisting}
 
-The first direction of the bisimulation is fairly straightforward: induction on
-the big step relation gives a simple proof that the reflexive transitive closure
-on the small step gives an equivalent state. 
-
 Note that the relation is defined on the reflexive transitive closure of the
-small-step relation \emph{only for the empty stack}. We use the fact that this
-implies that the same relation will hold for \emph{any} stack, something easy to
-prove, to show by induction on the reflexive transitive closure of the
-small-step semantics the other direction of the bisimulation. 
+small-step relation \emph{for all stacks}. We use the fact that this implies
+that the same relation will hold for the empty stack, which is the initial and
+final state of the small-step machine, as desired.
 

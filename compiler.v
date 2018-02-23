@@ -11,6 +11,7 @@ Definition compile (t : expr.tm) : option assembly.Program := match db t nil wit
   | None => None 
   end.
 
-(* Definition compile (t: expr.tm) : expr.closed t → { mc | trans_clos prog p }.
+(*Theorem compile_correct : Type := bool.
+ Definition compile (t: expr.tm) : expr.closed t → { mc | trans_clos prog p }.
 *)
 

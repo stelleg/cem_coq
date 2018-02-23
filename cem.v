@@ -5,8 +5,10 @@ Require Import CpdtTactics.
 
 Definition append := Datatypes.app.
 
-Inductive closure : Type := 
-  | close : tm → nat → closure. 
+Inductive closure : Type := close {
+  cl_tm : tm;
+  cl_en : nat
+}.
 
 Inductive cell : Type :=
   | cl : closure → nat → cell.

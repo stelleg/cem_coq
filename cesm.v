@@ -6,9 +6,14 @@ Require Import db util.
 Require Import cem relations.
 
 Definition stack := list (closure + nat).
+Definition heap := cem.heap.
+Definition closure := cem.closure.
 
-Inductive state : Type :=
-  | st : heap → stack → closure → state.
+Inductive state : Type := st {
+  st_hp : heap; 
+  st_st : stack;
+  st_cl : closure
+}.
 
 Definition I (e : tm) : state := st nil nil (close e 0).
 
@@ -33,7 +38,7 @@ Definition replaceClosure (l:nat) (c:closure) : nat * cell → nat * cell :=
     end.
 
 Reserved Notation " c1 '→_s' c2 " (at level 50).
-Inductive cesm_step : transition state :=
+Inductive step : transition state :=
   | Upd : ∀ Φ Υ b e e' c l s, 
   st (Φ++(l,(cl c e'))::Υ) (inr l::s) (close (lam b) e) →_s 
   st (Φ++(l,(cl (close (lam b) e) e'))::Υ) s (close (lam b) e)
@@ -43,7 +48,7 @@ Inductive cesm_step : transition state :=
   st Φ (inl c::s) (close (lam b) e) →_s st ((f, cl c e):: Φ) s (close b f)
   | App : ∀ Φ e s n m, 
   st Φ s (close (app m n) e) →_s st Φ (inl (close n e)::s) (close m e)
-where " c1 '→_s' c2 " := (cesm_step c1 c2).
+where " c1 '→_s' c2 " := (step c1 c2).
 
 Fixpoint transition_fold 
   {a b : Type} {s : transition a} (st en : a) 
@@ -56,11 +61,11 @@ Fixpoint transition_fold
   | t_step _ x y' z t xs => @transition_fold a b s y' z f xs (f x y' t y) 
   end.  
 
-Definition step_time_cost (x y : state) (s : cesm_step x y) : nat := match s with
+Definition step_time_cost (x y : state) (s : step x y) : nat := match s with
   | _ => 1
   end.
 
-Definition time_cost (x y : state) (s : refl_trans_clos cesm_step x y) : nat :=
+Definition time_cost (x y : state) (s : refl_trans_clos step x y) : nat :=
   transition_fold x y (fun x y s b => plus (step_time_cost x y s) b) s 0.
 
 (* Step as a function *
