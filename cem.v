@@ -18,7 +18,9 @@ Definition clclose (c: cell) : closure := match c with cl c e => c end.
 Definition heap := Map nat cell.
 
 Record configuration : Type := conf {
-  | conf : heap → closure → configuration.
+  conf_h : heap;
+  conf_c : closure
+}.
 
 Definition I (e : tm) : configuration := conf nil (close e 0).
 

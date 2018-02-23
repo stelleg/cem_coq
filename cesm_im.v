@@ -15,13 +15,11 @@ Inductive env_eq : nat → cem.heap →
     env_eq c ch pr c' ih →    
     env_eq n ch pr p ih.
     
-(*
 Inductive state_rel : cesm.state → im.State → Type := 
   | str : ∀ cs is, 
   prog_eq (st_rf is IP) (st_p is) (cl_tm (st_cl cs)) →
-  env_eq (st_rf is IP) (st_p is) (cl_tm (st_cl im)) →
+  env_eq (cl_en (st_cl cs)) (st_hp cs) (st_p is) (st_rf is EP) (st_h is) →
   state_rel cs is.
-*)
 
 Lemma cesm_im : ∀ v s s', 
   state_rel s s' → 
@@ -31,6 +29,6 @@ Admitted.
 
 Lemma cesm_im_assemble : ∀ t v v', 
   refl_trans_clos cesm.step (cesm.I t) v → 
-  refl_trans_clos step (I (assemble t 1)) v'.
+  refl_trans_clos im.step (im.I (assemble t 1)) v'.
 Admitted.
 
