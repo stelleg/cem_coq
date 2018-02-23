@@ -1,4 +1,5 @@
 Require Import Unicode.Utf8 util cesm im db db_assembly assembly relations List cem. 
+
 Definition prog_eq (p : Ptr) (pr : Program) (t : tm) := 
   let subpr := assemble t p in subpr = firstn (length subpr) (skipn p pr).
 
@@ -14,11 +15,13 @@ Inductive env_eq : nat → cem.heap →
     env_eq c ch pr c' ih →    
     env_eq n ch pr p ih.
     
+(*
 Inductive state_rel : cesm.state → im.State → Type := 
   | str : ∀ cs is, 
   prog_eq (st_rf is IP) (st_p is) (cl_tm (st_cl cs)) →
   env_eq (st_rf is IP) (st_p is) (cl_tm (st_cl im)) →
   state_rel cs is.
+*)
 
 Lemma cesm_im : ∀ v s s', 
   state_rel s s' → 

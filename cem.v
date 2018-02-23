@@ -17,7 +17,7 @@ Definition clclose (c: cell) : closure := match c with cl c e => c end.
 
 Definition heap := Map nat cell.
 
-Inductive configuration : Type :=
+Record configuration : Type := conf {
   | conf : heap → closure → configuration.
 
 Definition I (e : tm) : configuration := conf nil (close e 0).
