@@ -3,7 +3,6 @@ Require Import Unicode.Utf8.
 
 Definition Word := nat.
 Definition Ptr := nat.
-Definition Stack := list Word.
 
 Inductive Reg := 
   | IP

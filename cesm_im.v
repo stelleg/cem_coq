@@ -1,4 +1,5 @@
 Require Import Unicode.Utf8 util cesm im db db_assembly assembly relations List cem. 
+Import ListNotations.
 
 Definition prog_eq (p : Ptr) (pr : Program) (t : tm) := 
   let subpr := assemble t p in subpr = firstn (length subpr) (skipn p pr).
@@ -14,11 +15,32 @@ Inductive env_eq : nat → cem.heap →
     env_eq e ch pr e' ih →    
     env_eq c ch pr c' ih →    
     env_eq n ch pr p ih.
-    
+  
+Inductive clos_eq : cem.closure → cem.heap → 
+                    Ptr → Ptr → Program → im.Heap → 
+                    Type :=
+  | c_eq : ∀ t e ch p ip ep ih, 
+           prog_eq ip p t → 
+           env_eq e ch p ep ih →
+           clos_eq (cem.close t e) ch ip ep p ih.
+
+Inductive stack_eq : cesm.stack → cesm.heap →
+                     im.Stack → Program → im.Heap → Type := 
+  | stack_nil : ∀ ch p ih, 
+                stack_eq nil ch nil p ih
+  | stack_upd : ∀ e ch p ep ih cs is, 
+                 env_eq e ch p ep ih →
+                 stack_eq cs ch is p ih →
+                 stack_eq (inr e::cs) ch (0::ep::is) p ih
+  | stack_arg : ∀ ch p ip ep ih cs is c, 
+                 clos_eq c ch ip ep p ih →
+                 stack_eq cs ch is p ih → 
+                 stack_eq (inl c::cs) ch (ip::ep::is) p ih.
+
 Inductive state_rel : cesm.state → im.State → Type := 
   | str : ∀ cs is, 
-  prog_eq (st_rf is IP) (st_p is) (cl_tm (st_cl cs)) →
-  env_eq (cl_en (st_cl cs)) (st_hp cs) (st_p is) (st_rf is EP) (st_h is) →
+  clos_eq (st_cl cs) (st_hp cs) (st_rf is IP) (st_rf is EP) (st_p is) (st_h is) →
+  stack_eq (st_st cs) (st_hp cs) (st_s is) (st_p is) (st_h is) →
   state_rel cs is.
 
 Lemma cesm_im : ∀ v s s', 

@@ -7,6 +7,9 @@ Import ListNotations.
 Require Import util.
 
 Definition Heap := Map Ptr Word.
+Definition Stack := list Word.
+Definition RegisterFile := Reg → Ptr.
+
 (*
 Inductive RegisterFile := rf {
   ip : Ptr;
@@ -24,7 +27,6 @@ Definition rff (r: Reg) : RegisterFile → Ptr := match r with
   | R3 => r3
   end.
 *)
-Definition RegisterFile := Reg → Ptr.
 
 Definition upd (r: Reg) (p: Ptr) (rf: RegisterFile) : RegisterFile := match r with
   | IP => λ r, match r with | IP => p | _ => rf r end
