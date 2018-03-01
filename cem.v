@@ -29,7 +29,7 @@ Notation " ⟨ Φ ⟩ m " := (conf Φ m) (at level 40).
 Notation " ⟨ Ψ , b ⟩ N " := (conf (cons b Ψ) N) (at level 40).
 Notation " ⟨ Φ , b , Ψ ⟩ N " := (conf (append _ Ψ (cons b Φ)) N) (at level 40).
 Notation " { M , e } " := (cl M e).
-Notation " < M , e > " := (close M e).
+(*Notation " < M , e > " := (close M e).*)
 
 (* cactus lookup: lookup deBruijn index i at location x in heap h yields
 location y *)
@@ -81,22 +81,24 @@ Inductive step : configuration → configuration → Type :=
               ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩close (:λB') ae
 where " c1 '⇓' c2 " := (step c1 c2).
 
+Variable id_const app_const : nat.
+
 Fixpoint time_cost {c1 c2} (s : step c1 c2) : nat := match s with 
-  | Id _ _ _ _ _ _ _ _ _ _ lu e => 1 + time_cost e
+  | Id _ _ _ _ _ _ _ _ v _ lu th => id_const * v + time_cost th
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 1 + time_cost m + time_cost b
+  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
   end. 
 
 Fixpoint stack_cost {c1 c2} (s : step c1 c2) : nat := match s with
-  | Id _ _ _ _ _ _ _ _ _ _ lu e => 1 + stack_cost e
+  | Id _ _ _ _ _ _ _ _ _ _ v e => 2 + stack_cost e
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 1 + max (stack_cost m) (stack_cost b)
+  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 2 + max (stack_cost m) (stack_cost b)
   end.
 
 Fixpoint heap_cost {c1 c2} (s : step c1 c2) : nat := match s with
   | Id _ _ _ _ _ _ _ _ _ _ lu e => heap_cost e
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 1 + heap_cost m + heap_cost b
+  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
   end.
 
 Definition configuration' := sigT well_formed.

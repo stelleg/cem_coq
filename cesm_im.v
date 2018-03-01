@@ -1,5 +1,7 @@
-Require Import Unicode.Utf8 util cesm im db db_assembly assembly relations List cem. 
+Require Import Unicode.Utf8 util cesm im db db_assembly assembly relations List cem.
 Import ListNotations.
+
+Variable new : ∀ (n:nat) (h : im.Heap), sigT (λ w:nat, ∀ i, lt i n → (plus w i) ∉ domain h). 
 
 Definition prog_eq (p : Ptr) (pr : Program) (t : tm) := 
   let subpr := assemble t p in subpr = firstn (length subpr) (skipn p pr).
@@ -45,8 +47,11 @@ Inductive state_rel : cesm.state → im.State → Type :=
 
 Lemma cesm_im : ∀ v s s', 
   state_rel s s' → 
-  refl_trans_clos cesm.step s v → 
-  sigT (fun v' =>  refl_trans_clos im.step s' v').
+  cesm.step s v → 
+  sigT (λ v', refl_trans_clos im.step s' v' * state_rel v v').
+intros v s s' r h. generalize dependent r. generalize dependent s'.  induction
+h; intros. 
+- inversion r. subst. inversion X0. subst. destruct s'. simpl in *. subst.   
 Admitted.
 
 Lemma cesm_im_assemble : ∀ t v v', 

@@ -20,6 +20,8 @@ Fixpoint subset {A} (l : list A) (m: list A) : Prop := match l with
   | nil => True
   | cons x xs => In x m /\ subset xs m
   end.
+Infix "∈" := In (at level 40). 
+Notation " a ∉ b " := (¬ In a b) (at level 40). 
 Notation " a ⊆ b " := (subset a b) (at level 30).
 Definition rel (A : Type) := A → A → Prop.
 Definition relation (A B : Type) := A → B → Prop.
