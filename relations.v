@@ -25,7 +25,7 @@ intros f x y z H H0. induction H. auto. apply IHrefl_trans_clos in H0. rename y 
 t_step with (y:=Y); auto. Qed. 
 
 (* p and q are bisimilar *)
-Notation "p '~' q" := (∃ fp fq R, strong_bisim p q fp fq R) (at level 30). 
+(*Notation "p '~' q" := (∃ fp fq R, strong_bisim p q fp fq R) (at level 30). *)
 
 Definition partial_function {X Y: Type} (R: relation X Y) :=
   ∀ (x : X) (y1 y2 : Y), R x y1 → R x y2 → y1 = y2. 

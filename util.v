@@ -1,38 +1,126 @@
-(* General utility file, should break up into smaller modules, e.g. Maps, Sets,
+(* General utility file, should break up into smaller modules, e.g. maps, Sets,
 etc. *)
 
-Require Import List Basics Logic.Decidable.
-Require Export EqNat Arith.Peano_dec.
+Require Import List Basics EqNat Logic.Decidable.
+Require Import Arith.Peano_dec.
 Require Import CpdtTactics.
 Require Import Logic.ProofIrrelevance.
-Require Import Unicode.Utf8.
+Require Export Unicode.Utf8.
 Require Import Compare_dec.
+Require Export set.
+Require Export JRWTactics.
+Import ListNotations. 
+
+Ltac induce h := (prep_induction h; induction h; intros; subst).
+Ltac invert h := (inversion h; subst; clear h). 
+
+Infix "∈" := In (at level 30).
+Notation "x ∉ y" := (¬ In x y) (at level 30). 
 
 Definition Map a b := list (a * b).
 
 Lemma wrap : forall A B (f:A -> B), f = fun a:A => f a. auto. Qed.  
 
-Inductive nth {a : Type} : nat → list a → a → Prop := 
-  | NZ : ∀ x xs, nth 0 (cons x xs) x
-  | NI : ∀ i x xs y, nth i xs y → nth (S i) (cons x xs) y.
-
-Fixpoint subset {A} (l : list A) (m: list A) : Prop := match l with
-  | nil => True
-  | cons x xs => In x m /\ subset xs m
-  end.
-Infix "∈" := In (at level 40). 
-Notation " a ∉ b " := (¬ In a b) (at level 40). 
 Notation " a ⊆ b " := (subset a b) (at level 30).
 Definition rel (A : Type) := A → A → Prop.
 Definition relation (A B : Type) := A → B → Prop.
 Definition equiv {A B} := ∀ (a a':A) (b b':B) (ra : rel A) (rb : rel B)
   (e : relation A B), e a b → ra a a' → rb b b' → e a' b'.
 
+Lemma in_comm {a} : ∀ l l' (x:a) , In x (l ++ l') <-> In x (l' ++ l).
+split; intros; rewrite in_app_iff; rewrite or_comm; rewrite <- in_app_iff;
+assumption. Qed.
+
+Lemma not_impl : ∀ p q : Prop, ¬ q → (p → q) → ¬ p. 
+unfold not. intros. apply H. apply H0. assumption. Qed.  
+
+Definition fmap_option {a b} : (a → b) → option a → option b := λ f o, 
+  match o with 
+  | Some m => Some (f m)
+  | None => None
+  end.
+
+Definition seq_option {a b} : option (a → b) → option a → option b := λ f o,
+  match f, o with
+    | Some g, Some a => Some (g a)
+    | _, _ => None
+  end.
+
+Fixpoint concat {a} (l: list (list a)) : list a := match l with
+  | nil => nil
+  | cons h t =>  h ++ concat t
+  end.
+  
+Notation "f <$> x" := (fmap_option f x) (at level 30).
+Notation "f <*> x" := (seq_option f x) (at level 40).
+
+(* We use index of element in a list to imlement and reason about conversion
+   between standard terms and deBruijn terms *)
+Fixpoint indexofhelper {a} (l:list a) (n:nat) (p:a → bool) := match l with
+  | [] => None
+  | x::xs => if p x then Some n else indexofhelper xs (S n) p
+  end. 
+
+Definition indexof {a} (p:a → bool) (l:list a) : option nat := 
+  indexofhelper l 0 p. 
+
+Definition indexofn (n:nat) (l:list nat) : option nat := indexof (beq_nat n) l. 
+
+Lemma indexofh_length {a} : ∀ p l n m, @indexofhelper a l m p = Some n → n < m + length l.
+induction l; intros. inversion H. simpl. unfold indexof in H. unfold
+indexofhelper in H. destruct (p a0). inversion H. subst. unfold lt. rewrite <-
+Plus.plus_Snm_nSm. apply Plus.le_plus_l. rewrite <- Plus.plus_Snm_nSm.
+apply IHl. assumption. Qed. 
+
+Lemma indexof_length {a} : ∀ p l n, @indexof a p l = Some n → n < length l. 
+intros. unfold indexof in H. apply indexofh_length in H. auto. Qed. 
+
+Lemma indexofn_inh : ∀ x xs n m, indexofhelper xs m (beq_nat x) = Some n → In x xs. 
+induction xs; intros. inversion H. unfold indexofn in H. unfold indexofhelper in H.
+destruct (beq_nat x a) eqn:be. simpl. apply beq_nat_true in be. subst. auto.
+apply IHxs in H. simpl. auto. Qed. 
+
+Lemma indexofn_in : ∀ x xs n, indexofn x xs = Some n → In x xs. 
+intros. unfold indexofn in H. unfold indexof in H. apply indexofn_inh in H.
+assumption. Qed. 
+
+Lemma in_indexofnh : ∀ x xs m, In x xs → ∃ n, indexofhelper xs m (beq_nat x) = Some n. 
+induction xs; intros. inversion H. inversion H. subst. exists m. unfold
+indexofn. unfold indexof. unfold indexofhelper. rewrite <- beq_nat_refl. auto.
+apply IHxs with (m:=S m) in H0. destruct H0. simpl. destruct (beq_nat x a)
+eqn:bn. exists m. reflexivity. exists x0. auto. Qed.
+
+Lemma in_indexofn : ∀ x xs, In x xs → ∃ n, indexofn x xs = Some n. 
+intros. apply in_indexofnh with (m:=0) in H. destruct H. exists x0. auto. Qed. 
+
+Lemma add_n_m_n0 : ∀ m n, m + n = m → n = 0.  
+intros. induction m. 
+- simpl in H. assumption. 
+- simpl in H. inversion H. apply IHm in H1. assumption. 
+Qed. 
+Lemma filter_app {A} : ∀ xs ys (p:A → bool), filter p xs ++ filter p ys = filter p (xs ++ ys). 
+intros. induction xs. reflexivity. simpl. destruct (p a). simpl. 
+rewrite <- IHxs. reflexivity. apply IHxs. Qed. 
+
 Lemma or_imp : forall a b c : Prop, (a \/ b -> c) <-> (a -> c) /\ (b -> c).
 intros. split; intros. split; intros.  apply or_introl with (B:=b) in H0. apply H in H0.
 assumption. apply or_intror with (A:=a) in H0. apply H in H0. assumption.
 destruct H. destruct H0. apply H in H0. assumption.  apply H1 in H0. assumption.
 Qed.
+
+Lemma cons_neq {A} : ∀ (x:A) xs, xs <> x::xs.
+intros. induction xs. unfold not. intros. inversion H. unfold not. intros.
+inversion H. apply IHxs in H2. auto. Qed. 
+
+Lemma app_eq_l {A} : ∀ a b c : list A, a ++ b = a ++ c → b = c. 
+intros. induction a. rewrite app_nil_l in H. rewrite app_nil_l in H. assumption.
+inversion H. apply IHa; assumption. Qed. 
+
+Lemma app_eq_r {A} : ∀ b a c : list A, a ++ b = c ++ b → a = c. 
+intros b. induction b; intros. rewrite app_nil_r in H. rewrite app_nil_r in H.
+assumption. assert (b = nil ++ b). reflexivity. rewrite H0 in H. rewrite
+app_comm_cons in H. rewrite app_assoc in H. rewrite app_assoc in H. apply IHb in
+H. apply app_inj_tail in H. destruct H. assumption. Qed. 
 
 Definition subset' {A} (l m : list A) : Prop := forall a, In a l -> In a m.
 
@@ -53,7 +141,56 @@ Fixpoint forevery {a} (l:list a) (p : a → Prop) : Prop := match l with
   | nil => True
   end.
 
+Lemma forevery_in {A} : ∀ l p, forevery l p → ∀ x:A, In x l → p x.
+induction l; intros. 
+- inversion H0. 
+- simpl in H. destruct H. inversion H0. subst. assumption. apply IHl;
+  assumption. Qed. 
+
+Lemma in_forevery {A} : ∀ l (p:A→Prop), (∀ x:A, In x l → p x) → forevery l p. 
+induction l; intros. 
+- simpl. auto. 
+- simpl. split. simpl in H. apply H. auto. apply IHl. intros. apply H. simpl.
+  auto. Qed. 
+
+Lemma for_in_iff {A} : ∀ l p, forevery l p ↔ (∀ x :A, In x l → p x). 
+intros. split. apply forevery_in. apply in_forevery. Qed. 
+
+Inductive related_lists {a b} (r : a → b → list a → list b → Prop) : list a → list b → Prop :=
+  | rel_nil : related_lists r nil nil
+  | rel_cons : ∀ x xs y ys, r x y xs ys → related_lists r xs ys → related_lists r (x::xs) (y::ys).
+
+Lemma forevery_map {A B} : ∀ (f:A→B) xs p, forevery (map f xs) p = forevery xs (compose p f).
+intros. induction xs. simpl. auto. simpl. f_equal. assumption. Qed.
+
 Definition domain {a b} (m : Map a b) : list a := map (@fst a b) m.
+Definition codomain {a b} (m : Map a b) : list b := map (@snd a b) m.
+
+Definition isfresh (l: list nat) (n : nat) : Prop := ¬ In n l. 
+Axiom fresh : ∀ (l:list nat), {n | isfresh l n}.
+Definition fresh' (x: nat) (Φ : list nat) :=
+  ∃ p, fresh Φ = exist (isfresh Φ) x p. 
+
+Definition homotopy {A B} (f g : A→B) := ∀ x, f x = g x.
+Notation "f ~ g" := (homotopy f g) (at level 60).  
+
+Lemma map_homo {A B} : ∀ (f g:A→B), f ~ g → map f ~ map g. 
+unfold homotopy. intros. induction x. auto. simpl. rewrite H. rewrite IHx. auto.
+Qed. 
+
+Inductive unique {a} : list a → Prop := 
+  | unil : unique nil
+  | ucons : ∀ x xs, ¬ In x xs → unique xs → unique (cons x xs). 
+(*
+Lemma indexofhelper_nth : ∀ xs x n m, unique xs →
+  indexofhelper xs m (beq_nat x) = Some (m+n) 
+                ↔ 
+      nth_error xs n = Some x. 
+induction xs. split; intros; auto. crush. apply nth_error_In in H0. inversion H0. 
+split; intros. simpl in H0. destruct (beq_nat x a) eqn:xa. inversion H0. symmetry
+in H2. apply add_n_m_n0 in H2. subst. simpl. apply beq_nat_true in xa. subst.
+reflexivity. inversion H. subst.   
+*)
 
 Definition fmap {A B C} (f : B -> C) : A * B -> A * C  := fun x => match x with
   | (a, b) => (a, f b) end. 
@@ -61,6 +198,8 @@ Definition fmap {A B C} (f : B -> C) : A * B -> A * C  := fun x => match x with
 Definition forevery_codomain {a b} (m:Map a b) (p : b → Prop) : Prop := forevery
   m (λ x, match x with (k,v) => p v end).
 
+Lemma snd_fmap {A} : (λ x:A*nat, pred (snd (fmap S x))) ~ (λ x:A*nat, snd x). 
+intros. unfold homotopy. intros. destruct x. reflexivity. Qed. 
 
 Lemma domain_fmap : forall A B C (f:B->C) (xs:Map A B),  domain (map
 (fmap f) xs) = domain xs.
@@ -70,6 +209,19 @@ Lemma domain_inf {a b} : ∀ xs (y:a) (m m':b) ys, domain (xs ++ (y,m) :: ys) =
                                    domain (xs ++ (y,m') :: ys).
 intros. unfold domain. rewrite map_app. simpl. rewrite map_app. simpl.
 reflexivity. Qed.                                    
+
+Lemma domain_inf' {a b} : ∀ xs zs (y:a) (m m':b) ys, domain (xs ++ zs ++ (y,m) :: ys) = 
+                                   domain (xs ++ zs ++ (y,m') :: ys).
+intros. unfold domain. rewrite map_app. assert (di:=@domain_inf a). unfold
+domain in di at 1. rewrite di with (m':=m'). unfold domain. rewrite <- map_app.
+reflexivity. Qed.                                    
+
+Lemma in_inf {a} : ∀ (x:a) xs ys, In x (xs ++ x :: ys).
+intros. apply in_or_app. apply or_intror. simpl. auto. Qed. 
+
+Lemma inf_indomain {a b} : ∀ (k:a) (v:b) ys zs, In k (domain (ys ++ (k,v) :: zs)). 
+intros. subst. unfold domain. rewrite map_app. apply
+in_or_app. apply or_intror. simpl. auto. Qed. 
 
 Lemma forevery_app : forall a (xs ys:list a) p, forevery (xs ++ ys) p <->
   forevery xs p ∧ forevery ys p.
@@ -94,10 +246,16 @@ rewrite <- H1. assumption. assumption. Qed.
 Lemma subset_nil : forall A ms, subset (@nil A) ms.
 intros. unfold subset. auto. Qed. 
 
+Lemma subset_map {A B} : ∀ xs ys (f:A→B), xs ⊆ ys → map f xs ⊆ map f ys. 
+intros xs. induction xs; intros. apply subset_nil. intros. simpl in H. simpl.
+split. destruct H. apply in_map. assumption. apply IHxs. destruct H. assumption.
+Qed. 
+
 Lemma subset_nil2 : forall A ms, subset ms (@nil A) -> ms = nil.
 intros. rewrite <- subset_eq in H. unfold subset' in H. induction ms.
 reflexivity. simpl in H. specialize H with a. destruct H. left. reflexivity.
 Qed. 
+
 
 Fixpoint remove (x : nat) (l : list nat) := match l with
   | nil => nil
@@ -181,6 +339,9 @@ intros. inversion H. destruct H0. symmetry. assumption. inversion H0. Qed.
 Lemma subset_cons {A} : forall (x : A) a l, subset a l -> subset a (x::l). intros.
 induction a. auto. inversion H. split. apply in_cons. assumption. 
 apply IHa in H1. assumption. Qed.  
+
+Lemma subset_app_weaken {A} : ∀ xs ys zs : list A, xs ⊆ ys → xs ⊆ (zs ++ ys). 
+induction zs. auto. intros. simpl. apply subset_cons. apply IHzs. auto. Qed. 
 
 Lemma cons_subset {A} : forall (x: A) xs ys, subset xs ys -> subset (x::xs) (x::ys).
 intros. unfold subset. simpl. split. left. reflexivity. apply subset_cons.
@@ -271,41 +432,97 @@ left. reflexivity. repeat (apply subset_cons). apply subset_id. right. left.
 reflexivity. split. left. reflexivity. repeat (apply subset_cons). apply
 subset_id. Qed.
 
-Fixpoint lookup {K V : Type} (E : ∀ n m : K, {n = m} + {n <> m})
-  (k : K) (l : Map K V) : option V := match l with
-    | nil => None
-    | cons (k',v) t => if E k k' then Some v else lookup E k t
-    end.
+Definition lookup {a} (x:nat) (l:Map nat a) : option a := 
+  match find (λ p, beq_nat x (fst p)) l with 
+    | None => None
+    | Some (k,v) => Some v
+  end.
 
-Definition lookup_total {A B eq} : forall (m : Map A B) a, In a (domain m) → ∃ b,
-  lookup eq a m = b. 
-intros. induction m. crush. simpl in H. destruct a0. destruct (eq a a0). destruct H. simpl in H.
-simpl. symmetry in e. subst. rewrite eq_dec_refl. apply ex_intro with (Some b). reflexivity.
-apply IHm in H. simpl. subst. rewrite eq_dec_refl. apply ex_intro with (Some b).
-reflexivity. destruct H. simpl in H. symmetry in H. apply n in H. inversion H. simpl. rewrite
-eq_dec_neq with (p:=n). apply IHm in H. assumption. Qed. 
+Lemma lookup_app' {A} : ∀ x (h h':Map nat A),
+  lookup x (h ++ h') = lookup x h ∨ lookup x (h ++ h') = lookup x h'.
+intros. induction h. simpl. right. reflexivity.  simpl. unfold lookup. destruct
+a. simpl. destruct (eq_nat_dec x n). subst. rewrite <- beq_nat_refl. left.
+reflexivity. rewrite <- beq_nat_false_iff in n0. rewrite n0. assumption. Qed.
+
+Lemma lookup_app {A} : ∀ x h h' (a:A), lookup x (h ++ h') = Some a ↔
+  lookup x h = Some a ∨ (lookup x h = None ∧ lookup x h' = Some a). 
+split; intros. induction h. right. split; auto. destruct a0. destruct (eq_nat_dec x n). 
+subst. unfold lookup. simpl. rewrite <- beq_nat_refl. left. simpl in H. unfold
+lookup in H. simpl in H. rewrite <- beq_nat_refl in H. assumption. unfold
+lookup. simpl. rewrite <- beq_nat_false_iff in n0. rewrite n0. apply IHh. unfold
+lookup in H. simpl in H. rewrite n0 in H. assumption. destruct H. induction h.
+inversion H. destruct a0. destruct (eq_nat_dec x n). subst. unfold lookup.
+simpl. rewrite <- beq_nat_refl. unfold lookup in H. simpl in H. rewrite <-
+beq_nat_refl in H. assumption. unfold lookup. simpl. rewrite <-
+beq_nat_false_iff in n0. rewrite n0. unfold lookup in H. simpl in H. rewrite n0
+in H. apply IHh. assumption. induction h. simpl. destruct H. assumption.
+destruct H. destruct a0.  unfold lookup in H. simpl. simpl in H. destruct
+(eq_nat_dec x n). subst. rewrite <- beq_nat_refl in H. inversion H. rewrite <-
+beq_nat_false_iff in n0. rewrite n0 in H. unfold lookup. simpl. rewrite n0.
+apply IHh. split; auto. Qed. 
+
+Lemma unique_toinf {A} : ∀ (a : A) bs cs, unique (bs ++ a :: cs) → 
+  unique (a :: bs ++ cs). 
+intros. prep_induction bs. induction bs; intros; simpl in *. assumption.
+inversion H. subst. apply IHbs in H3. inversion H3. subst. rewrite in_app_iff in
+H2. simpl in H2. apply not_or in H2. destruct H2. apply not_or in H1. destruct
+H1. apply ucons. simpl. unfold not. intros. destruct H6. symmetry in H6. apply
+H1. assumption. apply H4. assumption. apply ucons. rewrite in_app_iff. unfold
+not. intros. destruct H6. apply H0. assumption. apply H2. assumption.
+assumption. Qed. 
+
+Lemma unique_toinf' {A} : ∀ (a : A) bs cs, unique (a :: bs ++ cs) → 
+  unique (bs ++ a :: cs).
+intros. induction bs; simpl in *. assumption.  inversion H. subst. inversion H3.
+subst. simpl in H2. apply not_or in H2. destruct H2. specialize (IHbs (ucons _ _ H1
+H5)). apply ucons. rewrite in_app_iff. unfold not. intros. destruct H2. rewrite
+in_app_iff in H4. apply not_or in H4. destruct H4. apply H4. assumption. simpl
+in H2. destruct H2. apply H0. symmetry. assumption. rewrite in_app_iff in H4.
+apply not_or in H4. destruct H4. apply H6. assumption. assumption. Qed.  
+
+Lemma unique_app {A} : ∀ (a b:list A), unique (a ++ b) → unique (b ++ a). 
+intros. prep_induction a. induction a; intros.  rewrite app_nil_r. assumption.
+simpl in *. inversion H. subst.  apply unique_toinf' in H. apply IHa in H. simpl
+in *. apply unique_toinf' in H. assumption. Qed. 
+
+Definition lookup_total {B} : ∀ (m : Map nat B) a, In a (domain m) → 
+  {b | lookup a m = Some b}. 
+induction m; simpl; intros. inversion H. unfold lookup. destruct a. simpl.
+destruct (beq_nat a0 n) eqn:Heqe. exists b. reflexivity. apply IHm. intuition.
+simpl in H0. subst. rewrite <- beq_nat_refl in Heqe. inversion Heqe. Defined.
+
+Definition lookup_codomain {B} : ∀ (m : Map nat B) a b, lookup a m = Some b → In b (codomain m). 
+intros. induction m. inversion H. simpl. unfold lookup in H. simpl in H.
+destruct a0. simpl in H. destruct (beq_nat a n). simpl. inversion H. subst.
+auto. apply IHm in H. auto. Defined. 
 
 Definition flip {A B C} (f : A → B → C) : B → A → C := fun b a => f a b.
 
-Lemma in_domain_lookup {a b} : forall (m : Map a b) eq k, In k (domain m) →
-  exists v, lookup eq k m = Some v.
-  intros. induction m. crush. destruct a0. simpl in H. destruct (eq k a0).
-  subst. simpl. rewrite eq_dec_refl. apply ex_intro with b0. reflexivity.
-  simpl. destruct H. symmetry in H. apply n in H. inversion H. apply IHm in H. destruct H.
-  rewrite H. apply ex_intro with x. rewrite eq_dec_neq with (n:=a0) (m:=k)
-  (p:=n). reflexivity. Qed.
+Definition in_domain_lookup {B} := @lookup_total B. 
 
-Lemma subset_domain_map {a b} : forall l (m : Map a b) eq, subset l (domain m) → forevery l (λ k,
-  exists v, lookup eq k m = Some v).
+Lemma lookup_domain {b} : ∀ (m : Map nat b) k v, lookup k m = Some v → 
+  In k (domain m). 
+intros. induction m. inversion H. unfold lookup in H. simpl in H. destruct a.
+simpl in H. destruct (beq_nat k n) eqn:Heqe. inversion H. subst. simpl. apply
+or_introl. apply beq_nat_true in Heqe. symmetry in Heqe. assumption. apply IHm
+in H. simpl. apply or_intror. assumption. Qed.
+
+
+Definition tosig {A} : ∀ p:A → Prop, {x | p x} → ∃ x, p x. 
+intros. destruct X. exists x. assumption. Qed. 
+
+Lemma subset_domain_map {b} : ∀ l (m : Map nat b), subset l (domain m) → forevery l (λ k,
+  ∃ v, lookup k m = Some v).
 intros. induction l. crush. simpl in H. destruct H. apply IHl in H0. simpl.
-split. Focus 2. assumption. apply in_domain_lookup. assumption. Qed. 
+split. Focus 2. assumption. apply tosig. apply in_domain_lookup. assumption. Qed. 
 
-Lemma forevery_map {a b} : ∀ (m : Map a b) p eq l v, forevery_codomain m p →
-  lookup eq l m = Some v → p v.
-intros. induction m. crush. destruct a0. destruct (eq l a0). subst. simpl in H0.
-rewrite eq_dec_refl in H0. inversion H0. subst. unfold forevery_codomain in H. 
-simpl in H. crush. simpl in H0. rewrite eq_dec_neq with (p:=n) in H0. unfold
-forevery_codomain in H. simpl in H. destruct H. apply IHm in H1. assumption.
+Lemma forevery_codomain_lookup {b} : ∀ (m : Map nat b) p l v, forevery_codomain m p →
+  lookup l m = Some v → p v.
+intros. induction m. inversion H0. destruct a. destruct (eq_nat_dec l n). subst.
+unfold lookup in H0.  simpl in H0.  rewrite <- beq_nat_refl in H0. inversion H0.
+subst. unfold forevery_codomain in H.  simpl in H. crush. unfold lookup in H0.
+simpl in H0. rewrite <- beq_nat_false_iff in n0. rewrite n0 in H0. unfold
+forevery_codomain in H.  simpl in H.  destruct H. apply IHm in H1. assumption.
 assumption. Qed. 
 
 Lemma forevery_inf {a} : ∀ (xs ys:list a) (y:a) p, forevery (xs ++ y :: ys) p →
@@ -322,3 +539,119 @@ Definition max (m n : nat) : nat := match le_gt_dec m n with
   end.
 
 Definition maximum : list nat → nat := fold_right max 0.
+
+Definition replace {K V} (eq : K → K → bool) (k : K) (v : V) :
+  Map K V → Map K V := map (λ e, match e with | (k', v') => if eq k k' then
+    (k', v) else e end). 
+
+Lemma unique_inf {a b} : ∀ xs ys xs' ys' (k:a) (v v':b), unique (domain (xs ++ (k,v) :: ys)) → 
+  xs ++ (k,v) :: ys = xs' ++ (k,v') :: ys' → xs = xs' ∧ v = v' ∧ ys = ys'.
+intros.  generalize dependent xs'. generalize dependent ys'. induction xs.
+intros; induction xs'. inversion H0. subst. auto. inversion H0.  subst. simpl in H.
+inversion H; subst. assert (In k (domain (xs' ++ (k,v') :: ys'))). apply
+inf_indomain. apply H3 in H1. inversion H1. simpl in H. destruct a0. inversion H. subst.
+specialize (IHxs H3). intros. inversion H0. destruct xs'. inversion H0. subst.
+inversion H; subst. assert (In k (domain (xs ++ (k,v) :: ys))). apply
+inf_indomain. apply H6 in H1. inversion H1. inversion H4; subst. specialize
+(IHxs ys' xs' H6). split. f_equal. destruct IHxs; auto. destruct IHxs. destruct
+H5. split; auto. Qed.
+
+Lemma unique_domain_app {A} : ∀ (h h':Map nat A), unique (domain (h ++ h')) ↔
+unique (domain (h' ++ h)). intros. unfold domain. rewrite map_app. rewrite
+map_app. split; intros; apply unique_app; assumption. Qed.
+
+Lemma domain_app {A} : ∀ (h h':Map nat A), domain (h ++ h') = domain h ++ domain
+h'. intros. unfold domain. rewrite map_app. reflexivity. Qed. 
+  
+Lemma unique_domain_lookup {b} : ∀ xs k (v:b), unique (domain xs) → 
+  (∃ ys zs, xs = ys++(k,v)::zs) → lookup k xs = Some v.
+intros. induction xs. simpl. destruct H0. destruct H0. apply app_cons_not_nil in H0. inversion H0. 
+destruct H0. destruct H0. destruct x. inversion H0.  subst. unfold lookup.
+simpl.  rewrite <- beq_nat_refl. reflexivity. unfold lookup. simpl. destruct a.
+inversion H. subst. inversion H0. subst. unfold domain in H3. rewrite map_app in
+H3. rewrite in_app_iff in H3. apply or_imp in H3. destruct H3. simpl in H2.
+apply or_imp in H2. destruct H2. assert (k <> n). assumption.  rewrite <-
+beq_nat_false_iff in H5. simpl.  rewrite H5. apply IHxs. assumption. exists x,
+x0. reflexivity. Qed.
+
+Lemma lookup_inf {A} : ∀ x (a:A) h h', unique (domain (h ++ (x, a) :: h')) → 
+  lookup x (h ++ (x, a) :: h') = Some a. 
+intros. apply unique_domain_lookup. assumption. exists h, h'. reflexivity. Qed. 
+
+Lemma in_domain_pair {B} : ∀ (a:nat) (b:B) h, In (a, b) h → In a (domain h). 
+intros. induction h. inversion H. destruct a0. simpl. destruct (eq_nat_dec n a).
+apply or_introl. assumption. apply or_intror. simpl in H. destruct H. inversion
+H. subst. specialize (n0 eq_refl). inversion n0. apply IHh. assumption. Qed. 
+
+Lemma lookup_inpair {A} : ∀ x h, unique (domain h) → 
+  (∀ a:A, In (x,a) h ↔ lookup x h = Some a). 
+intros. split; prep_induction h; induction h; intros. inversion H0. destruct a.
+destruct (eq_nat_dec x n).  subst. unfold lookup. simpl. rewrite <-
+beq_nat_refl. simpl in H0. destruct H0.  inversion H0. subst. reflexivity.
+inversion H. subst. apply in_domain_pair in H0. apply H3 in H0. inversion H0.
+unfold lookup. simpl. assert (n0':=n0). rewrite <- beq_nat_false_iff in n0.
+rewrite n0. apply IHh. inversion H. assumption. unfold In in H0. destruct H0.
+inversion H0. subst. specialize (n0' eq_refl). inversion n0'. assumption. simpl.
+inversion H0. destruct a. inversion H. subst. simpl in *. destruct (eq_nat_dec x
+n). subst. unfold lookup in H0. simpl in H0. rewrite <- beq_nat_refl in H0.
+inversion H0. subst. apply or_introl. reflexivity. apply or_intror. unfold
+lookup in H0. rewrite <- beq_nat_false_iff in n0. simpl in H0.  rewrite n0 in
+H0. apply IHh. assumption. assumption. Qed.  
+
+Lemma lookup_e_inf {a} : ∀ k (v:a) h, lookup k h = Some v → ∃ h1 h2, h = h1 ++ (k,v) :: h2. 
+intros. induction h. inversion H. unfold lookup in H. simpl in H. destruct a0.
+simpl in H. destruct (beq_nat k n) eqn:bkn. inversion H. subst. apply
+beq_nat_true in bkn. subst. exists [], h.  reflexivity. apply IHh in H. destruct
+H. destruct H. subst. exists ((n, a0) :: x), x0. reflexivity. Qed. 
+
+Definition eq_dec (a :Type) := ∀ x y : a, {x = y} + {x ≠ y}. 
+
+Lemma neq_inf {A} : ∀ (x y:A) xs ys, x ≠ y → In y (xs ++ x :: ys) ↔ In y (xs ++ ys). 
+intros. induction xs; split; intros. simpl. simpl in H0. destruct H0. apply H in
+H0. inversion H0. assumption. simpl. simpl in H0. apply or_intror. assumption.
+simpl in H0. destruct H0. subst. simpl. apply or_introl. reflexivity. simpl. apply
+or_intror. rewrite <- IHxs. assumption. simpl. simpl in H0. destruct H0. auto.
+rewrite IHxs. auto. Qed. 
+
+Lemma lu_eq_iff {A} : ∀ x y h h', (∀ a:A, lookup x h = Some a ↔ lookup y h' = Some a)
+  ↔ lookup x h = lookup y h'. 
+intros. split; intros. destruct (lookup x h) eqn:lua. destruct  (lookup y h').
+specialize (H a). symmetry. rewrite <- H. reflexivity. specialize (H a).
+symmetry. rewrite <- H. reflexivity. destruct (lookup y h'). specialize (H a).
+rewrite H. reflexivity. reflexivity. rewrite H. split; intro; assumption. Qed. 
+
+Lemma lookup_not_inf {A} : ∀ (a:A) x y h h', x ≠ y → lookup x (h ++ (y, a) :: h') =
+  lookup x (h ++ h'). 
+intros. induction h. simpl. unfold lookup. simpl. destruct (beq_nat x y)
+eqn:bxy.  apply beq_nat_true in bxy. apply H in bxy. inversion bxy. reflexivity.
+simpl. unfold lookup. simpl. destruct a0. simpl in *. destruct (beq_nat x n)
+eqn:bxn. reflexivity. assumption. Qed. 
+
+Lemma lookup_app_unique {A} : ∀ x (h h' : Map nat A),  
+  unique (domain (h ++ h')) →
+  lookup x (h ++ h') = lookup x (h' ++ h). 
+intros. prep_induction h. induction h; intros. rewrite app_nil_r. rewrite
+app_nil_l. reflexivity. simpl in *. inversion H. subst. destruct a. simpl in *.
+destruct (eq_nat_dec x n). subst.  unfold lookup at 1. simpl. rewrite <-
+beq_nat_refl.  rewrite lookup_inf. reflexivity. unfold domain. rewrite map_app.
+apply unique_app. simpl. rewrite <- map_app. assumption. symmetry. rewrite <-
+beq_nat_false_iff in n0. unfold lookup at 2. simpl. rewrite n0.  unfold lookup
+in IHh. rewrite  IHh.  apply lookup_not_inf. apply beq_nat_false_iff.
+assumption. assumption. Qed. 
+
+Lemma replace_not_in {a} : ∀ xs l (c:a), ¬In l (domain xs) → replace beq_nat l c xs = xs.
+intros. induction xs. auto. destruct a0. destruct (eq_nat_dec l n). subst. simpl
+in H. apply or_imp in H. destruct H. specialize (H eq_refl). inversion H. simpl.
+rewrite <- beq_nat_false_iff in n0. rewrite n0. simpl in H. unfold not in H. rewrite or_imp in H. 
+destruct H. apply IHxs in H0. rewrite H0. reflexivity. Qed.
+
+Lemma replace_inf {a} : ∀ xs l (c c':a) ys, 
+  unique (domain (xs ++ (l,c) :: ys)) →
+  replace beq_nat l c' (xs ++ (l,c) :: ys) = xs ++ (l,c') :: ys.
+intros. induction xs. simpl. rewrite <- beq_nat_refl. simpl in H. inversion H.
+subst. rename c into C. apply replace_not_in with (c:=c') in H2. rewrite H2.
+reflexivity. simpl. destruct a0. destruct (eq_nat_dec l n). subst. inversion H.
+subst. specialize (H2 (inf_indomain n c xs ys)). inversion H2.  rewrite <-
+beq_nat_false_iff in n0. rewrite n0. inversion H; subst. apply IHxs in H3.
+rewrite H3. reflexivity. Qed. 
+

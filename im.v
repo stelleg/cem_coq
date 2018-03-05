@@ -1,5 +1,4 @@
 (* Instruction Machine *)
-
 Require Import assembly util relations.
 Require Import Unicode.Utf8.
 Require Import List.
@@ -95,7 +94,7 @@ Inductive step_bb : BasicBlock → State → State → Type :=
 Inductive step : transition State :=
   | enter : ∀ rf p s h k bb sn,
     read IP (st rf p s h) k → 
-    nth k p bb → 
+    nth_error p k = Some bb → 
     step_bb bb (st rf p s h) sn →
     step (st rf p s h) sn.
 

@@ -15,7 +15,7 @@ Inductive cell : Type :=
 
 Definition clclose (c: cell) : closure := match c with cl c e => c end.
 
-Definition heap := Map nat cell.
+Definition heap := Map env cell.
 
 Record configuration : Type := conf {
   conf_h : heap;
@@ -33,7 +33,7 @@ Notation " { M , e } " := (cl M e).
 
 (* cactus lookup: lookup deBruijn index i at location x in heap h yields
 location y *)
-Inductive cactus_lookup : nat → nat → heap → nat → Prop :=
+Inductive cactus_lookup : nat → env → heap → nat → Prop :=
   | zero : forall x Φ M Υ, cactus_lookup 0 x (Φ ++ (x ↦ M) :: Υ) x
   | pred : forall x y z Φ M Υ i, cactus_lookup i x Φ z → 
             cactus_lookup (S i) y (Φ ++ (y ↦ {M, x}):: Υ) z.
@@ -65,34 +65,34 @@ Definition well_formed (c : configuration) : Prop := match c with
 
 Reserved Notation " c1 '⇓' c2 " (at level 50).
 Inductive step : configuration → configuration → Type :=
-  | Id : ∀ M B x y z Φ Ψ Υ v e, clu v z (Υ ++ x ↦ {M,y} :: Φ) = Some (x, M) → 
-            ⟨Φ, (x ↦ {M,y}), Υ⟩M ⇓ ⟨Ψ, (x ↦ {M,y}), Υ⟩close (:λB) e →
-    ⟨Φ, x ↦ {M, y}, Υ⟩close (var v) z ⇓ ⟨Ψ, x ↦ {close (:λB) e, y}, Υ⟩close (:λB) e
+  | Id : ∀ M x z Φ Ψ y v, clu y z Φ = Some (x, M) → 
+            ⟨Φ⟩M ⇓ ⟨Ψ⟩v →
+    ⟨Φ⟩close (var y) z ⇓ ⟨Ψ⟩v
   | Abs : ∀ N Φ e, ⟨Φ⟩close (:λN) e ⇓ ⟨Φ⟩close (:λN) e
-  | App : ∀ N M B B' Φ Ψ Υ f e ne ae, fresh f Ψ → 
+  | App : ∀ N M B Φ Ψ Υ f e ne v, fresh f Ψ → 
           ⟨Φ⟩close M e ⇓ ⟨Ψ⟩close (:λB) ne → 
-      ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓ ⟨Υ⟩close (:λB') ae   →
-              ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩close (:λB') ae
+      ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓ ⟨Υ⟩v   →
+              ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩v
 where " c1 '⇓' c2 " := (step c1 c2).
 
 Variable id_const app_const : nat.
 
 Fixpoint time_cost {c1 c2} (s : step c1 c2) : nat := match s with 
-  | Id _ _ _ _ _ _ _ _ v _ lu th => id_const * v + time_cost th
+  | Id _ _ _ _ _ v _ lu th => id_const * v + time_cost th
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
+  | App _ _ _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
   end. 
 
 Fixpoint stack_cost {c1 c2} (s : step c1 c2) : nat := match s with
-  | Id _ _ _ _ _ _ _ _ _ _ v e => 2 + stack_cost e
+  | Id _ _ _ _ _ _ _ v e => 2 + stack_cost e
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 2 + max (stack_cost m) (stack_cost b)
+  | App _ _ _ _ _ _ _ _ _ _ _ m b => 2 + max (stack_cost m) (stack_cost b)
   end.
 
 Fixpoint heap_cost {c1 c2} (s : step c1 c2) : nat := match s with
-  | Id _ _ _ _ _ _ _ _ _ _ lu e => heap_cost e
+  | Id _ _ _ _ _ _ _ lu e => heap_cost e
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
+  | App _ _ _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
   end.
 
 Definition configuration' := sigT well_formed.

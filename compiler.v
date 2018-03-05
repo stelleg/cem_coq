@@ -1,7 +1,8 @@
-Require expr cbn cem cesm im db assembly.
+Require expr cem cesm im db assembly.
+Require curien_cem_name. 
 Require Import cem_cesm cesm_im.
 Require Import Unicode.Utf8.
-Require Import util expr_db db_assembly relations.
+Require Import util db_assembly relations.
 
 (* This file has the high level structure of the compiler and the corresponding
 main theorems of correctness *)

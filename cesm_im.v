@@ -1,7 +1,7 @@
 Require Import Unicode.Utf8 util cesm im db db_assembly assembly relations List cem.
 Import ListNotations.
 
-Variable new : ∀ (n:nat) (h : im.Heap), sigT (λ w:nat, ∀ i, lt i n → (plus w i) ∉ domain h). 
+Variable new : ∀ (n:nat) (h : im.Heap), sigT (λ w:nat, ∀ i, lt i n → (plus w i) ∉ domain h).
 
 Definition prog_eq (p : Ptr) (pr : Program) (t : tm) := 
   let subpr := assemble t p in subpr = firstn (length subpr) (skipn p pr).
