@@ -1,24 +1,26 @@
 Require Import List curien cem_name util Unicode.Utf8.
 
-Inductive env_eq (h : heap) : curien.env → cem_name.env → Type := 
+Inductive env_eq (h : heap) : curien.env → cem.env → Type := 
   | env_eq_nil : ∀ l, env_eq h nil l
   | env_eq_cons : ∀ t e e' l l' l'', 
-      lookup l h = Some (cl (cem_name.close t l') l'') → 
+      lookup l h = Some (cl (cem.close t l') l'') → 
       env_eq h e l' → 
       env_eq h e' l'' → 
       env_eq h (curien.close t e :: e') l
   .
 
-Inductive close_eq (h : heap) : curien.closure → cem_name.closure → Type := 
-  | close_equiv : ∀ t e l, env_eq h e l → close_eq h (curien.close t e) (cem_name.close t l).
+Inductive close_eq (h : heap) : curien.closure → cem.closure → Type := 
+  | close_equiv : ∀ t e l, env_eq h e l → close_eq h (curien.close t e) (cem.close t l).
 
 Lemma nth_lookup : ∀ x h e l c, env_eq h e l → nth_error e x = Some c → 
-  sigT (λ l', sigT (λ c', prod (clu x l h = Some (l', c')) (close_eq h c c'))). 
+  sigT (λ l', sigT (λ c', prod (clu x l h = Some (l', c')) (close_eq h c (cell_cl c')))). 
 induction x; intros. 
 -  inversion H0. subst. unfold clu. inversion H. subst. inversion H2. subst. exists l.
-   exists (close t l'). split; auto. rewrite H1. reflexivity. inversion H2. subst. apply close_equiv.  assumption.  
--  inversion H0. subst. inversion H. subst. inversion H2. subst. apply IHx with (c:=c) in H4.
-   destruct H4. destruct s. exists x0. exists x1. simpl. rewrite H1. assumption. assumption. 
+   exists (cl (close t l') l''). split; auto. rewrite H1. reflexivity.
+   inversion H2. subst. apply close_equiv.  assumption.  
+-  inversion H0. subst. inversion H. subst. inversion H2. subst. apply IHx with
+   (c:=c) in H4.  destruct H4. destruct s. exists x0. exists x1. simpl. rewrite
+   H1. assumption. assumption. 
 Qed. 
 
 Lemma env_eq_fresh : ∀ x c h e l, env_eq h e l → x ∉ domain h → env_eq ((x,c)::h) e l. 
@@ -42,9 +44,10 @@ Theorem step_eq : ∀ h c c' v, close_eq h c c' → curien.step c v →
 intros. induce H0; intros. 
 - exists (conf h c'). inversion H. subst. split. constructor. assumption. 
 - destruct c'. inversion H. subst. apply (nth_lookup x h e cl_en c H2) in e0. 
-  destruct e0. destruct s. destruct p. specialize (IHstep h x1 c0). destruct
-  IHstep. destruct x2. destruct y. apply Id with (Ψ:=conf_h) (v:=conf_c) in e0.
-  exists (conf conf_h conf_c). split; auto. assumption. 
+  destruct e0. destruct s. destruct p. destruct x1. specialize (IHstep h
+  cell_cl c0). destruct IHstep. destruct x1. destruct y. apply Id with
+  (Ψ:=conf_h) (v:=conf_c) in e0.  exists (conf conf_h conf_c). split; auto.
+  assumption. 
 - inversion H. subst.  specialize (IHstep1 h (close m l)). destruct IHstep1.
   constructor; auto.  destruct x.  destruct y.  inversion c. subst. destruct
   fresh with (l:=domain (conf_h)). specialize (IHstep2 ((x, cl (close n l)

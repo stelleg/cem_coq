@@ -5,15 +5,15 @@ Require Import CpdtTactics.
 
 Definition env := nat.
 
-Inductive closure : Type := close {
+Record closure : Type := close {
   cl_tm : tm;
   cl_en : env
 }.
 
-Inductive cell : Type :=
-  | cl : closure → env → cell.
-
-Definition clclose (c: cell) : closure := match c with cl c e => c end.
+Record cell : Type := cl {
+  cell_cl : closure;
+  cell_env : env
+}.
 
 Definition heap := Map nat cell.
 
@@ -29,25 +29,27 @@ Notation " ⟨ Φ ⟩ m " := (conf Φ m) (at level 40).
 Notation " ⟨ Ψ , b ⟩ N " := (conf (b :: Ψ) N) (at level 40).
 Notation " ⟨ Φ , b , Ψ ⟩ N " := (conf (Ψ ++ b :: Φ) N) (at level 40).
 Notation " { M , e } " := (cl M e).
-(*Notation " < M , e > " := (close M e).*)
+Notation " < M , e > " := (close M e).
 
 (* cactus lookup: lookup deBruijn index i at location x in heap h yields
 location y *)
-Inductive cactus_lookup : nat → nat → heap → nat → Prop :=
-  | zero : forall x Φ M Υ, cactus_lookup 0 x (Φ ++ (x ↦ M) :: Υ) x
-  | pred : forall x y z Φ M Υ i, cactus_lookup i x Φ z → 
-            cactus_lookup (S i) y (Φ ++ (y ↦ {M, x}):: Υ) z.
+Inductive cactus_lookup : nat → nat → heap → (nat * cell) → Prop :=
+  | zero : forall x Φ M Υ, cactus_lookup 0 x (Φ ++ (x ↦ M) :: Υ) (x, M) 
+  | pred : forall x y c Φ M Υ i, cactus_lookup i x Φ c →
+            cactus_lookup (S i) y (Φ ++ (y ↦ {M, x}):: Υ) c.
 
-Fixpoint clu (v env:nat) (h:heap) : option (nat * closure) := match lookup env h with
+Fixpoint clu (v env:nat) (h:heap) : option (nat * cell) := match lookup env h with
   | None => None
   | Some (cl c a) => match v with
     | S n => clu n a h
-    | 0 => Some (env, c)
+    | 0 => Some (env, cl c a)
     end
   end.
 
-Definition fresh (n : nat) (h : heap) := 
-  ~ In n (domain h).
+Fixpoint update (h : heap) (l : env) (v : closure) : heap := match h with 
+  | [] => []
+  | (u, cl c e)::h => if beq_nat l u then (u, cl v e) :: h else (u, cl c e)::update h l v
+  end.
 
 Definition closed_under (c : closure) (h : heap)  : Prop := match c with
   | close t e => forevery (fvs t) 
@@ -65,11 +67,11 @@ Definition well_formed (c : configuration) : Prop := match c with
 
 Reserved Notation " c1 '⇓' c2 " (at level 50).
 Inductive step : configuration → configuration → Type :=
-  | Id : ∀ M B x y z Φ Ψ Υ v e, clu v z (Υ ++ x ↦ {M,y} :: Φ) = Some (x, M) → 
-            ⟨Φ, (x ↦ {M,y}), Υ⟩M ⇓ ⟨Ψ, (x ↦ {M,y}), Υ⟩close (:λB) e →
-    ⟨Φ, x ↦ {M, y}, Υ⟩close (var v) z ⇓ ⟨Ψ, x ↦ {close (:λB) e, y}, Υ⟩close (:λB) e
+  | Id : ∀ M x y z Φ Ψ v e, clu y e Φ = Some (x, {M, z}) → 
+                    ⟨Φ⟩M ⇓ ⟨Ψ⟩v →
+    ⟨Φ⟩close (var y) e ⇓ ⟨update Ψ x v⟩v
   | Abs : ∀ N Φ e, ⟨Φ⟩close (:λN) e ⇓ ⟨Φ⟩close (:λN) e
-  | App : ∀ N M B B' Φ Ψ Υ f e ne ae, fresh f Ψ → 
+  | App : ∀ N M B B' Φ Ψ Υ f e ne ae, isfresh (domain Ψ) f → 
           ⟨Φ⟩close M e ⇓ ⟨Ψ⟩close (:λB) ne → 
       ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓ ⟨Υ⟩close (:λB') ae   →
               ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩close (:λB') ae
@@ -78,19 +80,19 @@ where " c1 '⇓' c2 " := (step c1 c2).
 Variable id_const app_const : nat.
 
 Fixpoint time_cost {c1 c2} (s : step c1 c2) : nat := match s with 
-  | Id _ _ _ _ _ _ _ _ v _ lu th => id_const * v + time_cost th
+  | Id _ _ v _ _ _ _ _ lu th => id_const * v + time_cost th
   | Abs _ _ _ => 0
   | App _ _ _ _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
   end. 
 
 Fixpoint stack_cost {c1 c2} (s : step c1 c2) : nat := match s with
-  | Id _ _ _ _ _ _ _ _ _ _ v e => 2 + stack_cost e
+  | Id _ _ _ _ _ _ _ _ v e => 2 + stack_cost e
   | Abs _ _ _ => 0
   | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 2 + max (stack_cost m) (stack_cost b)
   end.
 
 Fixpoint heap_cost {c1 c2} (s : step c1 c2) : nat := match s with
-  | Id _ _ _ _ _ _ _ _ _ _ lu e => heap_cost e
+  | Id _ _ _ _ _ _ _ _ lu e => heap_cost e
   | Abs _ _ _ => 0
   | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
   end.
@@ -105,6 +107,13 @@ Lemma well_formed_inf : ∀ c x c' n  Φ Υ,
   intros. split. inversion H. unfold well_formed_heap in H1. apply forevery_app in H1.
   destruct H1. simpl in H2. destruct H2. auto. 
   auto. inversion H. auto. Qed. 
+
+Lemma values_only : ∀ c e M Ψ, c ⇓ ⟨Ψ⟩close M e → value M.
+intros. induce X. 
+- invert H0. apply IHX with (e:=e1) (Ψ0:=Ψ). reflexivity. 
+- invert H0. simpl. constructor. 
+- invert H0. apply IHX2 with (e:=e0) (Ψ:=Ψ0). reflexivity. 
+Qed.
 
 (*
 Lemma well_formed_inf' : ∀ Φ Ψ x c c' n,
@@ -134,9 +143,6 @@ Lemma inf_well_formed : ∀ c x c' n  Φ Υ, well_formed (⟨Φ, x ↦ cl c' n, 
 
 Theorem well_formed_step : ∀ c v, well_formed c → c ⇓ v → well_formed v.
 intros. induction H0. apply well_formed_inf in H. apply IHstep in H.  
-
-Lemma values_only : ∀ c e M Ψ, c ⇓ ⟨Ψ⟩close M e → value M.
-intros. inversion H; simpl; auto. Qed.
 
 Example simple : (step (⟨nil⟩ close (:λ0 @ :λ0) 0) (⟨nil, 0 ↦ {close (:λ0) 0,
 0}⟩ close (:λ0) 0)).

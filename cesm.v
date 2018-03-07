@@ -39,12 +39,12 @@ Definition replaceClosure (l:nat) (c:closure) : nat * cell → nat * cell :=
 
 Reserved Notation " c1 '→_s' c2 " (at level 50).
 Inductive step : transition state :=
-  | Upd : ∀ Φ Υ b e e' c l s, 
-  st (Φ++(l,(cl c e'))::Υ) (inr l::s) (close (lam b) e) →_s 
-  st (Φ++(l,(cl (close (lam b) e) e'))::Υ) s (close (lam b) e)
-  | Var : ∀ Φ s v l c e, clu v e Φ = Some (l,c) → 
+  | Upd : ∀ Φ b e l s, 
+  st Φ (inr l::s) (close (lam b) e) →_s 
+  st (update Φ l (close (lam b) e)) s (close (lam b) e)
+  | Var : ∀ Φ s v l c e e', clu v e Φ = Some (l,cl c e') → 
   st Φ s (close (var v) e) →_s st Φ (inr l::s) c
-  | Abs : ∀ Φ b e f c s, fresh f Φ → 
+  | Abs : ∀ Φ b e f c s, isfresh (domain Φ) f → 
   st Φ (inl c::s) (close (lam b) e) →_s st ((f, cl c e):: Φ) s (close b f)
   | App : ∀ Φ e s n m, 
   st Φ s (close (app m n) e) →_s st Φ (inl (close n e)::s) (close m e)

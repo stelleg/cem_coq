@@ -2,95 +2,36 @@ Require Import db util.
 Require Import Arith.EqNat.
 Require Import List Unicode.Utf8 Arith.Peano_dec.
 Require Import CpdtTactics.
+Require Export cem. 
 
-Definition env := nat.
-
-Inductive closure : Type := close {
-  cl_tm : tm;
-  cl_en : env
-}.
-
-Inductive cell : Type :=
-  | cl : closure → env → cell.
-
-Definition clclose (c: cell) : closure := match c with cl c e => c end.
-
-Definition heap := Map env cell.
-
-Record configuration : Type := conf {
-  conf_h : heap;
-  conf_c : closure
-}.
-
-Definition I (e : tm) : configuration := conf nil (close e 0).
-
-Notation " x ↦ M " := (x, M) (at level 40).
-Notation " ⟨ Φ ⟩ m " := (conf Φ m) (at level 40).
-Notation " ⟨ Ψ , b ⟩ N " := (conf (b :: Ψ) N) (at level 40).
-Notation " ⟨ Φ , b , Ψ ⟩ N " := (conf (Ψ ++ b :: Φ) N) (at level 40).
-Notation " { M , e } " := (cl M e).
-(*Notation " < M , e > " := (close M e).*)
-
-(* cactus lookup: lookup deBruijn index i at location x in heap h yields
-location y *)
-Inductive cactus_lookup : nat → env → heap → nat → Prop :=
-  | zero : forall x Φ M Υ, cactus_lookup 0 x (Φ ++ (x ↦ M) :: Υ) x
-  | pred : forall x y z Φ M Υ i, cactus_lookup i x Φ z → 
-            cactus_lookup (S i) y (Φ ++ (y ↦ {M, x}):: Υ) z.
-
-Fixpoint clu (v env:nat) (h:heap) : option (nat * closure) := match lookup env h with
-  | None => None
-  | Some (cl c a) => match v with
-    | S n => clu n a h
-    | 0 => Some (env, c)
-    end
-  end.
-
-Definition fresh (n : nat) (h : heap) := 
-  ~ In n (domain h).
-
-Definition closed_under (c : closure) (h : heap)  : Prop := match c with
-  | close t e => forevery (fvs t) 
-      (λ x, ∃e' c', clu x e h = Some (e',c') ∧ In e' (domain h))
-  end.
-
-Definition closed (t : tm) : Prop := closed_under (close t 0) nil.
-
-Definition well_formed_heap (h : heap) : Prop := forevery h 
-  (λ x, match x with | (v,cl c e') => closed_under c h end). 
-
-Definition well_formed (c : configuration) : Prop := match c with 
-  | conf h t => closed_under t h ∧ well_formed_heap h 
-  end.
-
-Reserved Notation " c1 '⇓' c2 " (at level 50).
+Reserved Notation " c1 '⇓n' c2 " (at level 50).
 Inductive step : configuration → configuration → Type :=
-  | Id : ∀ M x z Φ Ψ y v, clu y z Φ = Some (x, M) → 
-            ⟨Φ⟩M ⇓ ⟨Ψ⟩v →
-    ⟨Φ⟩close (var y) z ⇓ ⟨Ψ⟩v
-  | Abs : ∀ N Φ e, ⟨Φ⟩close (:λN) e ⇓ ⟨Φ⟩close (:λN) e
-  | App : ∀ N M B Φ Ψ Υ f e ne v, fresh f Ψ → 
-          ⟨Φ⟩close M e ⇓ ⟨Ψ⟩close (:λB) ne → 
-      ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓ ⟨Υ⟩v   →
-              ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩v
-where " c1 '⇓' c2 " := (step c1 c2).
+  | Id : ∀ M x z Φ Ψ y v e, clu y z Φ = Some (x, {M, e}) → 
+            ⟨Φ⟩M ⇓n ⟨Ψ⟩v →
+    ⟨Φ⟩close (var y) z ⇓n ⟨Ψ⟩v
+  | Abs : ∀ N Φ e, ⟨Φ⟩close (:λN) e ⇓n ⟨Φ⟩close (:λN) e
+  | App : ∀ N M B Φ Ψ Υ f e ne v, isfresh (domain Ψ) f → 
+          ⟨Φ⟩close M e ⇓n ⟨Ψ⟩close (:λB) ne → 
+      ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓n ⟨Υ⟩v   →
+              ⟨Φ⟩close (M@N) e ⇓n ⟨Υ⟩v
+where " c1 '⇓n' c2 " := (step c1 c2).
 
 Variable id_const app_const : nat.
 
 Fixpoint time_cost {c1 c2} (s : step c1 c2) : nat := match s with 
-  | Id _ _ _ _ _ v _ lu th => id_const * v + time_cost th
+  | Id _ _ _ _ _ v _ _ lu th => id_const * v + time_cost th
   | Abs _ _ _ => 0
   | App _ _ _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
   end. 
 
 Fixpoint stack_cost {c1 c2} (s : step c1 c2) : nat := match s with
-  | Id _ _ _ _ _ _ _ v e => 2 + stack_cost e
+  | Id _ _ _ _ _ _ _ _ v e => 2 + stack_cost e
   | Abs _ _ _ => 0
   | App _ _ _ _ _ _ _ _ _ _ _ m b => 2 + max (stack_cost m) (stack_cost b)
   end.
 
 Fixpoint heap_cost {c1 c2} (s : step c1 c2) : nat := match s with
-  | Id _ _ _ _ _ _ _ lu e => heap_cost e
+  | Id _ _ _ _ _ _ _ _ lu e => heap_cost e
   | Abs _ _ _ => 0
   | App _ _ _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
   end.

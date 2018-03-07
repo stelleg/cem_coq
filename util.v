@@ -1,15 +1,16 @@
 (* General utility file, should break up into smaller modules, e.g. maps, Sets,
 etc. *)
-
-Require Import List Basics EqNat Logic.Decidable.
-Require Import Arith.Peano_dec.
-Require Import CpdtTactics.
-Require Import Logic.ProofIrrelevance.
 Require Export Unicode.Utf8.
+Require Export JRWTactics.
+Require Export CpdtTactics.
+Require Export List. 
+Require Export EqNat Arith.Peano_dec.
+
+Require Import Basics EqNat Logic.Decidable.
+Require Import Logic.ProofIrrelevance.
 Require Import Compare_dec.
 Require Export set.
-Require Export JRWTactics.
-Import ListNotations. 
+Export ListNotations. 
 
 Ltac induce h := (prep_induction h; induction h; intros; subst).
 Ltac invert h := (inversion h; subst; clear h). 
@@ -544,7 +545,8 @@ Definition replace {K V} (eq : K → K → bool) (k : K) (v : V) :
   Map K V → Map K V := map (λ e, match e with | (k', v') => if eq k k' then
     (k', v) else e end). 
 
-Lemma unique_inf {a b} : ∀ xs ys xs' ys' (k:a) (v v':b), unique (domain (xs ++ (k,v) :: ys)) → 
+Lemma unique_inf {a b} : ∀ xs ys xs' ys' (k:a) (v
+v':b), unique (domain (xs ++ (k,v) :: ys)) → 
   xs ++ (k,v) :: ys = xs' ++ (k,v') :: ys' → xs = xs' ∧ v = v' ∧ ys = ys'.
 intros.  generalize dependent xs'. generalize dependent ys'. induction xs.
 intros; induction xs'. inversion H0. subst. auto. inversion H0.  subst. simpl in H.
@@ -655,3 +657,14 @@ subst. specialize (H2 (inf_indomain n c xs ys)). inversion H2.  rewrite <-
 beq_nat_false_iff in n0. rewrite n0. inversion H; subst. apply IHxs in H3.
 rewrite H3. reflexivity. Qed. 
 
+(*
+Lemma replace_lookup  {a} : ∀ h l (c v:a), lookup l h = Some c → 
+  lookup l (replace beq_nat l v h) = Some v.  
+intros. induce h. 
+- inversion H. 
+- simpl. destruct a0. destruct (beq_nat l n) eqn:ln. unfold lookup. unfold
+  find. simpl. rewrite ln. reflexivity. unfold lookup in H. simpl. inversion H.
+  unfold lookup. unfold find. simpl. rewrite ln.  unfold lookup in IHh. unfold
+  find in IHh. simpl in *. apply IHh.  apply beq_nat_true in ln. subst. unfold
+  lookup. unfo.  
+*)

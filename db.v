@@ -12,10 +12,8 @@ Inductive tm : Type :=
   | lam : tm -> tm
   | app : tm -> tm -> tm.
 
-Definition value (t : tm) : Prop := match t with
-  | lam _ => True
-  | _ => False
-  end.
+Inductive value : tm → Type := 
+  | isval : ∀ b, value (lam b).
 
 Fixpoint fvs (e:tm) : list nat := match e with
   | var v =>  v::nil
