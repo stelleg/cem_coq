@@ -48,8 +48,31 @@ Fixpoint clu (v env:nat) (h:heap) : option (nat * cell) := match lookup env h wi
 
 Fixpoint update (h : heap) (l : env) (v : closure) : heap := match h with 
   | [] => []
-  | (u, cl c e)::h => if beq_nat l u then (u, cl v e) :: h else (u, cl c e)::update h l v
+  | (u, cl c e)::h => if beq_nat l u then (u, cl v e) :: update h l v else (u, cl c e)::update h l v
   end.
+
+Lemma lookup_update : ∀ h l c v e, 
+  lookup l h = Some (cl c e) →
+  lookup l (update h l v) = Some (cl v e). 
+induction h; intros. inversion H. simpl. destruct a. destruct c0. unfold lookup
+in H. unfold find in H. simpl in H. destruct (beq_nat l n) eqn:bln. invert H. 
+unfold lookup. unfold find. simpl. rewrite bln. reflexivity. unfold lookup.
+unfold find. simpl. rewrite bln. rewrite <- (IHh l c). unfold lookup.
+unfold find. reflexivity. apply H. Qed.  
+
+Lemma lookup_update' : ∀ h l c v e l', 
+  lookup l h = Some (cl c e) →
+  l <> l' →
+  lookup l (update h l' v) = Some (cl c e). 
+induction h; intros. inversion H. simpl. destruct a. destruct c0. unfold lookup
+in H. unfold find in H. simpl in H. destruct (beq_nat l n) eqn:bln. invert H.
+destruct (beq_nat l' n) eqn:bln'. apply beq_nat_true in bln. apply beq_nat_true
+in bln'. subst. unfold not in H0. specialize (H0 eq_refl). invert H0. unfold
+lookup. unfold find. simpl. rewrite bln. reflexivity. destruct (beq_nat l' n)
+eqn:bln'. unfold lookup.  unfold find. simpl. rewrite bln. erewrite <- (IHh l c).
+unfold find.  reflexivity. apply H. assumption. unfold lookup. unfold find.
+simpl. rewrite bln. erewrite <- (IHh l c). reflexivity. assumption.
+assumption. Qed.  
 
 Definition closed_under (c : closure) (h : heap)  : Prop := match c with
   | close t e => forevery (fvs t) 
