@@ -74,6 +74,22 @@ unfold find.  reflexivity. apply H. assumption. unfold lookup. unfold find.
 simpl. rewrite bln. erewrite <- (IHh l c). reflexivity. assumption.
 assumption. Qed.  
 
+Lemma domain_update : ∀ h l v, 
+  domain (update h l v) = domain h. 
+induction h. auto. intros. simpl. destruct a. destruct c. simpl. destruct
+(PeanoNat.Nat.eqb l n); auto. simpl. rewrite IHh. reflexivity. 
+simpl. rewrite IHh. reflexivity. 
+Qed. 
+
+Lemma update_nodomain : ∀ h l v, 
+  l ∉ domain h → update h l v = h.
+induction h. auto. intros. simpl in H. destruct a. unfold not in H. simpl in *.
+destruct c. destruct (eq_nat_dec l n). subst. specialize (H (or_introl
+eq_refl)). invert H. rewrite <- PeanoNat.Nat.eqb_neq in n0. rewrite n0. 
+rewrite IHh. reflexivity. unfold not. intros. specialize (H (or_intror H0)).
+assumption. 
+Qed. 
+
 Definition closed_under (c : closure) (h : heap)  : Prop := match c with
   | close t e => forevery (fvs t) 
       (λ x, ∃e' c', clu x e h = Some (e',c') ∧ In e' (domain h))
@@ -94,7 +110,7 @@ Inductive step : configuration → configuration → Type :=
                     ⟨Φ⟩M ⇓ ⟨Ψ⟩v →
     ⟨Φ⟩close (var y) e ⇓ ⟨update Ψ x v⟩v
   | Abs : ∀ N Φ e, ⟨Φ⟩close (:λN) e ⇓ ⟨Φ⟩close (:λN) e
-  | App : ∀ N M B B' Φ Ψ Υ f e ne ae, isfresh (domain Ψ) f → 
+  | App : ∀ N M B B' Φ Ψ Υ f e ne ae, isfresh (domain Ψ) f → f > 0 →
           ⟨Φ⟩close M e ⇓ ⟨Ψ⟩close (:λB) ne → 
       ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓ ⟨Υ⟩close (:λB') ae   →
               ⟨Φ⟩close (M@N) e ⇓ ⟨Υ⟩close (:λB') ae
@@ -105,9 +121,9 @@ Variable id_const app_const : nat.
 Fixpoint time_cost {c1 c2} (s : step c1 c2) : nat := match s with 
   | Id _ _ v _ _ _ _ _ lu th => id_const * v + time_cost th
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
+  | App _ _ _ _ _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
   end. 
-
+(*
 Fixpoint stack_cost {c1 c2} (s : step c1 c2) : nat := match s with
   | Id _ _ _ _ _ _ _ _ v e => 2 + stack_cost e
   | Abs _ _ _ => 0
@@ -119,7 +135,7 @@ Fixpoint heap_cost {c1 c2} (s : step c1 c2) : nat := match s with
   | Abs _ _ _ => 0
   | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
   end.
-
+*)
 Definition configuration' := sigT well_formed.
 Definition step' (c1 c2: configuration') : Type := match (c1, c2) with
   | (existT _ c1 _, existT _ c2 _) => step c1 c2 end.

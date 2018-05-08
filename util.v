@@ -167,7 +167,7 @@ intros. induction xs. simpl. auto. simpl. f_equal. assumption. Qed.
 Definition domain {a b} (m : Map a b) : list a := map (@fst a b) m.
 Definition codomain {a b} (m : Map a b) : list b := map (@snd a b) m.
 
-Definition isfresh (l: list nat) (n : nat) : Prop := ¬ In n l. 
+Definition isfresh (l: list nat) (n : nat) : Prop := ¬ In n l.  
 Axiom fresh : ∀ (l:list nat), {n | isfresh l n}.
 Definition fresh' (x: nat) (Φ : list nat) :=
   ∃ p, fresh Φ = exist (isfresh Φ) x p. 
@@ -363,6 +363,10 @@ assumption. Qed.
 Lemma symmetry : forall p q : Prop, p = q <-> q = p. intros. split; intros;
 symmetry in H; assumption. Qed. 
 
+Lemma neq_sym {a} : ∀ x y:a, x <> y → y <> x. 
+unfold not. intros. symmetry in H0. apply H. assumption. 
+Qed. 
+
 Lemma subset_remove_cons : forall a v vs, subset a (v::vs) <-> subset (remove v a) vs. 
 intros. split; intros. rewrite <- subset_eq. rewrite <- subset_eq in H. unfold subset' in H.  
 unfold subset'. simpl in H. intros. specialize H with a0. destruct (eq_nat_dec
@@ -438,6 +442,14 @@ Definition lookup {a} (x:nat) (l:Map nat a) : option a :=
     | None => None
     | Some (k,v) => Some v
   end.
+
+Lemma lookup_head {a} : ∀ x (v:a) h, lookup x ((x,v)::h) = Some v.
+intros. unfold lookup. unfold find. simpl. rewrite <- beq_nat_refl. reflexivity.
+Qed.
+
+Lemma lookup_head' {a} : ∀ x y (v:a) h, x <> y → lookup x ((y,v)::h) = lookup x h.
+intros. unfold lookup. unfold find. simpl. rewrite <- PeanoNat.Nat.eqb_neq in H.
+rewrite H. reflexivity. Qed. 
 
 Lemma lookup_app' {A} : ∀ x (h h':Map nat A),
   lookup x (h ++ h') = lookup x h ∨ lookup x (h ++ h') = lookup x h'.
@@ -647,6 +659,10 @@ in H. apply or_imp in H. destruct H. specialize (H eq_refl). inversion H. simpl.
 rewrite <- beq_nat_false_iff in n0. rewrite n0. simpl in H. unfold not in H. rewrite or_imp in H. 
 destruct H. apply IHxs in H0. rewrite H0. reflexivity. Qed.
 
+Lemma replace_domain {k a} : ∀ h (l:k) eq (v:a), domain h = domain (replace eq l v h). 
+induction h. simpl. auto. intros. destruct a0. simpl. destruct (eq l k0); simpl.
+erewrite IHh. reflexivity. erewrite IHh. reflexivity. Qed. 
+
 Lemma replace_inf {a} : ∀ xs l (c c':a) ys, 
   unique (domain (xs ++ (l,c) :: ys)) →
   replace beq_nat l c' (xs ++ (l,c) :: ys) = xs ++ (l,c') :: ys.
@@ -668,3 +684,41 @@ intros. induce h.
   find in IHh. simpl in *. apply IHh.  apply beq_nat_true in ln. subst. unfold
   lookup. unfo.  
 *)
+
+Lemma lookup_replace {A} : ∀ h l (v:A) c, 
+  lookup l h = Some c →
+  lookup l (replace beq_nat l v h) = Some v.
+induction h; intros. inversion H. simpl. destruct a. unfold lookup in *. unfold
+find in *. simpl in *. destruct (beq_nat l n) eqn:ln. invert H. simpl in *.
+rewrite ln. reflexivity. simpl. rewrite ln.  apply (IHh l v c). assumption. 
+Qed.
+
+Lemma lookup_replace' {A} : ∀ h l (v:A) c k, 
+  lookup l h = Some c →
+  l <> k →
+  lookup l (replace beq_nat k v h) = Some c.
+induction h; intros. inversion H. simpl. destruct a. unfold lookup in *. unfold
+find in *. simpl in *. destruct (beq_nat l n) eqn:ln. invert H. simpl in *.
+destruct (beq_nat k n) eqn:kn. apply beq_nat_true in ln. apply beq_nat_true in
+kn. rewrite <- ln in kn. symmetry in kn. apply H0 in kn. inversion kn. simpl in
+*. rewrite ln. reflexivity. destruct (beq_nat k n) eqn:kn. simpl. rewrite ln.
+apply (IHh l v c k). assumption. assumption. simpl. rewrite ln. apply (IHh l v c
+k). assumption. assumption. 
+Qed.
+
+Lemma skipn_3_skipn {a} : ∀ n (x y z:a) p l, skipn n p = x::y::z::l → skipn (3+n) p = l.
+induction n; intros. simpl. simpl in H. invert H. reflexivity. simpl. simpl in
+H. simpl in IHn. destruct p. invert H.  apply IHn in H. assumption. Qed.
+
+Lemma in_notin_neq {a} : ∀ (x y:a) l, x ∈ l → y ∉ l → x <> y. 
+induction l; intros. inversion H. inversion H. subst. unfold not in H0. unfold
+not. intros. subst. apply H0. assumption. apply IHl. assumption. unfold not.
+intros. unfold not in H0. simpl in H0. apply H0. apply or_intror. assumption.
+Qed.
+
+Lemma prod_assoc : ∀ a b c, (a * b) * c → a * (b * c).  
+crush. Qed.  
+
+Lemma prod_assoc' : ∀ a b c, a * (b * c) → (a * b) * c.  
+crush. Qed.  
+

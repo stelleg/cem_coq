@@ -44,7 +44,7 @@ Inductive step : transition state :=
   st (update Φ l (close (lam b) e)) s (close (lam b) e)
   | Var : ∀ Φ s v l c e e', clu v e Φ = Some (l,cl c e') → 
   st Φ s (close (var v) e) →_s st Φ (inr l::s) c
-  | Abs : ∀ Φ b e f c s, isfresh (domain Φ) f → 
+  | Abs : ∀ Φ b e f c s, isfresh (domain Φ) f → f > 0 → 
   st Φ (inl c::s) (close (lam b) e) →_s st ((f, cl c e):: Φ) s (close b f)
   | App : ∀ Φ e s n m, 
   st Φ s (close (app m n) e) →_s st Φ (inl (close n e)::s) (close m e)

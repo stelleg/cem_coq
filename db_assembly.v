@@ -17,15 +17,15 @@ Fixpoint var_inst (i : nat) : BasicBlock := match i with
 (* Assembles deBruijn indices to instructions *)
 Fixpoint assemble (t : tm) (k : nat) : Program := match t with  
   | var v => [var_inst v]
-  | app m n => let ms := assemble m (k+1) in
-               let nk := k + 1 + length ms in
+  | app m n => let ms := assemble m (1+k) in
+               let nk := 1+k+length ms in
                 push EP ;
                 push (RC nk) ;
-                jump None (RC (k+1)) :: 
+                jump None (RC (1+k)) :: 
                 ms ++ 
                 assemble n nk
   | lam b => pop R1 ;
-             jump (Some (RW (WR R1), (k+1))) (RC (k+2)) ::
+             jump (Some (RW (WR R1), (1+k))) (RC (2+k)) ::
              (*Update*)
              pop R1 ;  
              mov (RC k) (R1%0) ;
@@ -37,7 +37,7 @@ Fixpoint assemble (t : tm) (k : nat) : Program := match t with
              pop (R2%1) ;
              mov EP (R2%2) ;
              mov R2 EP ;
-             jump None (k+3) :: 
-             assemble b (k+3)
+             jump None (3+k) :: 
+             assemble b (3+k)
   end. 
 

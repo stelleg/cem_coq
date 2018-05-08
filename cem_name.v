@@ -4,16 +4,18 @@ Require Import List Unicode.Utf8 Arith.Peano_dec.
 Require Import CpdtTactics.
 Require Export cem. 
 
+Definition earg {a p} : sig p → a := λ e, match e with exist _ x _ => x end.
+
 Reserved Notation " c1 '⇓n' c2 " (at level 50).
 Inductive step : configuration → configuration → Type :=
   | Id : ∀ M x z Φ Ψ y v e, clu y z Φ = Some (x, {M, e}) → 
             ⟨Φ⟩M ⇓n ⟨Ψ⟩v →
     ⟨Φ⟩close (var y) z ⇓n ⟨Ψ⟩v
   | Abs : ∀ N Φ e, ⟨Φ⟩close (:λN) e ⇓n ⟨Φ⟩close (:λN) e
-  | App : ∀ N M B Φ Ψ Υ f e ne v, isfresh (domain Ψ) f → 
+  | App : ∀ N M B Φ Ψ Υ e ne v, 
           ⟨Φ⟩close M e ⇓n ⟨Ψ⟩close (:λB) ne → 
-      ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓n ⟨Υ⟩v   →
-              ⟨Φ⟩close (M@N) e ⇓n ⟨Υ⟩v
+    (let f := earg (fresh (domain Ψ)) in ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓n ⟨Υ⟩v)  →
+              ⟨Φ⟩close (M@N) e ⇓n ⟨Υ⟩v 
 where " c1 '⇓n' c2 " := (step c1 c2).
 
 Variable id_const app_const : nat.
@@ -21,24 +23,38 @@ Variable id_const app_const : nat.
 Fixpoint time_cost {c1 c2} (s : step c1 c2) : nat := match s with 
   | Id _ _ _ _ _ v _ _ lu th => id_const * v + time_cost th
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
+  | App _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
   end. 
 
 Fixpoint stack_cost {c1 c2} (s : step c1 c2) : nat := match s with
   | Id _ _ _ _ _ _ _ _ v e => 2 + stack_cost e
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ m b => 2 + max (stack_cost m) (stack_cost b)
+  | App _ _ _ _ _ _ _ _ _ m b => 2 + max (stack_cost m) (stack_cost b)
   end.
 
 Fixpoint heap_cost {c1 c2} (s : step c1 c2) : nat := match s with
   | Id _ _ _ _ _ _ _ _ lu e => heap_cost e
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
+  | App _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
   end.
 
 Definition configuration' := sigT well_formed.
 Definition step' (c1 c2: configuration') : Type := match (c1, c2) with
   | (existT _ c1 _, existT _ c2 _) => step c1 c2 end.
+
+Definition determ : ∀ c v v', step c v → step c v' → v = v'. 
+intros. induce X. 
+- invert X0. rewrite e0 in H3. invert H3. apply IHX. assumption.
+- invert X0. reflexivity. 
+- invert X0. apply IHX in X1. invert X1. simpl in *. apply H in X2. assumption. 
+Qed. 
+
+Definition values_only : ∀ c v, step c v → value (cl_tm (conf_c v)).
+intros. induce X. 
+- auto. 
+- constructor. 
+- simpl in *. assumption. 
+Qed.
 
 Lemma well_formed_inf : ∀ c x c' n  Φ Υ, 
   well_formed (⟨Φ, x ↦ cl c' n, Υ⟩c) → 

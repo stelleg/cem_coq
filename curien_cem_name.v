@@ -35,9 +35,10 @@ Lemma env_eq_step : ∀ h h' c v e l, cem_name.step (conf h c) (conf h' v) → e
 intros. induce X. 
 - invert H2. invert H1. apply IHX with (h0:=h) (c:=M) (v:=v0); auto. 
 - invert H2. invert H1. assumption. 
-- invert H2. invert H1. specialize (IHX1 _ _ _ _ e0 l H eq_refl eq_refl). apply
-  env_eq_fresh with (x:=f) (c:=cl (close N e) ne) in IHX1. specialize (IHX2 _ _
-  _ _ e0 l IHX1 eq_refl eq_refl). assumption. assumption. Qed.
+- invert H2. invert H1. specialize (IHX _ _ _ _ e0 l H eq_refl eq_refl). apply
+  env_eq_fresh with (x:=earg (fresh (domain Ψ))) (c:=cl (close N e) ne) in IHX.
+  simpl in *. specialize (X0 _ _ _ _ e0 l IHX eq_refl eq_refl). assumption.
+  simpl in *. destruct (fresh (domain Ψ)). simpl. assumption. Qed.
 
 Theorem step_eq : ∀ h c c' v, close_eq h c c' → curien.step c v → 
   sigT (λ co, match co with conf h' v' => prod (cem_name.step (conf h c') co) (close_eq h' v v') end). 
@@ -49,13 +50,15 @@ intros. induce H0; intros.
   (Ψ:=conf_h) (v:=conf_c) in e0.  exists (conf conf_h conf_c). split; auto.
   assumption. 
 - inversion H. subst.  specialize (IHstep1 h (close m l)). destruct IHstep1.
-  constructor; auto.  destruct x.  destruct y.  inversion c. subst. destruct
-  fresh with (l:=domain (conf_h)). specialize (IHstep2 ((x, cl (close n l)
-  l0)::conf_h) (close b x)). destruct IHstep2. constructor. apply env_eq_cons
-  with (l':=l) (l'':=l0). unfold lookup. simpl. rewrite PeanoNat.Nat.eqb_refl.
-  reflexivity. apply env_eq_fresh. apply env_eq_step with (h:=h) (c:=close m l)
-  (v:=close (db.lam b) l0). assumption. assumption. assumption. apply
-  env_eq_fresh. assumption. assumption. exists x0. destruct x0. split. apply
-  App with (B:=b) (Ψ:=conf_h) (f:=x) (ne:= l0). assumption. assumption.
-  destruct y. assumption. destruct y. assumption.  
+  constructor; auto.  destruct x.  destruct y. inversion c. subst.
+  specialize (IHstep2 (((earg (fresh (domain conf_h))), cl (close n l)
+  l0)::conf_h) (close b (earg (fresh (domain conf_h))))). destruct
+  IHstep2. constructor. apply env_eq_cons with (l':=l) (l'':=l0). unfold lookup.
+  simpl. rewrite PeanoNat.Nat.eqb_refl.  reflexivity. apply env_eq_fresh. apply
+  env_eq_step with (h:=h) (c:=close m l) (v:=close (db.lam b) l0). assumption.
+  assumption. destruct (fresh (domain conf_h)). simpl. assumption. apply
+  env_eq_fresh. assumption. destruct (fresh (domain conf_h)). assumption.
+  exists x. destruct x. split. apply App with (B:=b) (Ψ:=conf_h)
+  (ne:= l0).  assumption. simpl. destruct y. assumption.  destruct y.
+  assumption.   
 Qed. 

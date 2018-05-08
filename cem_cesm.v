@@ -27,7 +27,7 @@ intros. induce X; intros; invert H1; invert H0.
     * apply t_step2 with (y:=b2s (⟨Ψ ⟩ close (db.lam B) ne) (inl (close N e):: s)).
       -- simpl. rename e into E. rename s into S. 
          apply Abs with (b:=B) (e:=ne) (c:=close N E) (s:= S). 
-         assumption. 
+         assumption. assumption.
       -- apply IHX1. reflexivity. reflexivity.  
     * simpl. apply IHX2. reflexivity. reflexivity.  
 Qed. 

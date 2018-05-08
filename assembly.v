@@ -8,8 +8,7 @@ Inductive Reg :=
   | IP
   | EP
   | R1
-  | R2
-  | R3.
+  | R2.
 
 Inductive WO := 
   | WR : Reg → WO
