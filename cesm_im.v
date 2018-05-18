@@ -396,13 +396,13 @@ Lemma forall_heap_rel_tail : ∀ l il t e ne ip ep nep ch ih
     ((il, ip)::(S il, ep)::(S (S il), nep)::ih) 
     (heap_cons l il ne ch ih ip ep nep e t pl pil psil pssil gl gil r) 
     l' e' ne' t' il' ip' ep' nep' →
-    prop t' e' ip' ep') → 
+    prop t' e' ip' ep' ne' nep') → 
   (∀ l' e' ne' t' il' ip' ep' nep', in_heap_rel 
     ch 
     ih 
     r 
     l' e' ne' t' il' ip' ep' nep' →
-    prop t' e' ip' ep'). 
+    prop t' e' ip' ep' ne' nep'). 
 intros. apply X with (l':=l') (ne':=ne') (il':=il') (nep':=nep'). apply
 in_heap_rel_upd_head'. apply inr. split; auto. apply in_heap_rel_lookup
 in X0. destruct X0. destruct p. destruct p. apply lookup_domain in e3. apply
@@ -423,15 +423,15 @@ rewrite (IHr1 r2). reflexivity.
 Qed. 
 
 Lemma in_heap_rel_upd : ∀ ch ih r l e ne t il ip ep nep ep' ip' v e' 
-  (prop : tm → nat → Ptr → Ptr → Type),
+  (prop : tm → nat → Ptr → Ptr → nat → Ptr → Type),
   (∀ l e ne t il ip ep nep, in_heap_rel ch ih r l e ne t il ip ep nep → 
-                            prop t e ip ep) →
+                            prop t e ip ep ne nep) →
   in_heap_rel ch ih r l e ne t il ip ep nep →
-  prop v e' ip' ep' →
+  prop v e' ip' ep' ne nep →
   sigT (λ r', (∀ l' e ne t il' ip ep nep, 
       (in_heap_rel (update ch l (close v e')) 
                   (replace beq_nat (S il) ep' (replace beq_nat il ip' ih)) 
-                  r' l' e ne t il' ip ep nep) → prop t e ip ep)).
+                  r' l' e ne t il' ip ep nep) → prop t e ip ep ne nep)).
 intros. induce r. invert X0. assert (X0' := X0). apply in_heap_rel_upd_head in
 X0'. destruct X0'. 
 - repeat (destruct p). subst. rewrite update_head. rewrite replace_head. rewrite
@@ -460,7 +460,7 @@ X0'. destruct X0'.
   repeat (rewrite replace_head'; auto). Focus 2. apply in_heap_rel_lookup in i.
   destruct i. repeat (destruct p). simpl in e3. apply lookup_domain in e3. apply
   (in_notin_neq (S il) l' (domain ih)); auto.  
-  assert (ihr := forall_heap_rel_tail _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ X). 
+  assert (ihr := forall_heap_rel_tail _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ prop X). 
   specialize (IHr ihr i X1). destruct IHr. 
   exists (heap_cons l l' ne 
          (update ch l0 (close v e')) 
@@ -473,7 +473,49 @@ X0'. destruct X0'.
   i0.*) apply p in i0. assumption. 
   Qed. 
 
-Lemma in_heap_rel_upd : ∀ ch ih r l e ne t il ip ep nep ep' ip' v p e', 
+Lemma in_heap_rel_update_exists : ∀ ch ih r l e ne t il ip ep nep t' e' l' il' ep' ip' 
+  e'' ne' t'' ip'' ep'' nep' r',
+  in_heap_rel ch ih r l e ne t il ip ep nep →
+  in_heap_rel ch ih r l' e'' ne' t'' il' ip'' ep'' nep' →
+  sigT (λ t, sigT (λ e, sigT (λ ip, sigT (λ ep,  
+  in_heap_rel (update ch l' (close t' e'))  
+              (replace beq_nat (S il') ep' (replace beq_nat il' ip' ih))
+              r' l e ne t il ip ep nep)))).
+intros. induce r. invert X. generalize dependent r'. 
+(*destruct (IHr l e ne t il ip ep nep t' e' l' il' ep'
+ ip'). apply in_heap_rel_upd_head in X. destruct X. repeat
+(destruct p). subst. assert (ihr := in_heap_head l0 il ne0 ch ih ip0 ep0 nep e1
+t0 n n0 n1 n2 g g0 r).*) destruct (update_head_exists l'0 l (close t e) ne
+(close t' e') ch). rewrite e2. destruct x. clear e2. 
+edestruct (@replace_head_exists nat). rewrite e2. clear e2.
+edestruct (@replace_head_exists nat). rewrite e2. clear e2.
+edestruct (@replace_head_exists nat). rewrite e2. clear e2.
+edestruct (@replace_head_exists nat). rewrite e2. clear e2.
+assert (n':=n). assert (n0':=n0). assert (n1':=n1). assert (n2':=n2). 
+apply in_heap_rel_upd_head in X. destruct X. repeat (destruct p). subst. 
+apply in_heap_rel_upd_head in X0. destruct X0. repeat (destruct p). subst. 
+repeat (rewrite replace_head'); auto. repeat (rewrite replace_not_in); auto. 
+rewrite update_nodomain; auto. 
+exists cl_tm, cl_en, x0, x2. dependent destruction r'. apply in_heap_head. 
+apply PeanoNat.Nat.lt_neq. auto. repeat (destruct p). repeat (rewrite (replace_head')); auto. 
+exists cl_tm, cl_en, x0, x2. dependent destruction r'. apply in_heap_head. 
+repeat (destruct p). apply in_heap_rel_upd_head in X0. destruct X0. repeat
+(destruct p). subst. repeat (rewrite replace_head').  rewrite replace_not_in.
+rewrite replace_not_in. rewrite update_nodomain. 
+exists t0, e1, ip0, ep0. dependent destruction r'. assert (rr :=
+(contractable_heap_rel ch ih r' r)). rewrite rr. 
+apply in_heap_rel_upd_head'. apply inr. split; auto. auto. auto.  rewrite
+replace_not_in; auto. unfold not. intros. inversion H.  subst. apply
+PeanoNat.Nat.neq_succ_diag_r in H1.
+assumption. apply PeanoNat.Nat.lt_neq. auto. repeat (destruct p). repeat
+(rewrite replace_head'); auto. intros r'. 
+dependent destruction r'.  
+specialize (IHr _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ r' i i0). destruct IHr.
+repeat (destruct s). exists x3, x4, x5, x6. apply in_heap_rel_upd_head'. apply
+inr. split; auto. Qed.
+
+Open Scope type_scope. 
+Lemma in_heap_rel_upd' : ∀ ch ih r l e ne t il ip ep nep ep' ip' v p e', 
   in_heap_rel ch ih r l e ne t il ip ep nep →
   heap_eq ch ih r p → 
   prog_eq ip' p v →
@@ -482,77 +524,17 @@ Lemma in_heap_rel_upd : ∀ ch ih r l e ne t il ip ep nep ep' ip' v p e',
           (replace beq_nat (S il) ep' (replace beq_nat il ip' ih))
           r'
           p).
-intros. induce r. 
-- simpl. exists heap_nil. constructor. simpl. intros. invert H0.      
-- invert X0. apply in_heap_rel_upd_head in X. destruct X. 
-  + repeat (destruct p0).     exists (heap_cons l0 il ne0 ch ih ip' ep' nep e' v n n0 n1 n2 g g0 r).
-    specialize (X2 _ _ _ _ _ _ _ _ (in_heap_head _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
-    _)).  constructor. intros. apply in_heap_rel_upd_head in X. destruct X.
-    crush. eapply (eS _ _ _ p e1 e ne t il0 ip ep nep0 _) .  crush. specialize
-    (X2 l e1 ne t0 il0 ip0 ep0 nep0).
-    rewrite <- beq_nat_refl in X2. rewrite <- beq_nat_refl in X2. simpl in X2.
-    crush. const assumption. split. split.  h
-    assumption. 
-    rewrite
-  replace_head. simpl. rewrite <- beq_nat_refl. rewrite <-
-  beq_nat_refl. destruct il. crush p0. pply X2 in X. destruct X. destruct p0. apply in_heap_rel_upd_head
-  in X2. simpl. simpl in 
-  destruct (beq_nat l0 l) eqn:l0l.             
-  destruct (beq_nat il l') eqn:ill'. simpl in X. apply beq_nat_true in l0l. apply
-beq_nat_true in ill'. subst. repeat (destruct X as [X]). subst. 
-rewrite update_head. rewrite replace_head. rewrite
-replace_head'; auto. rewrite replace_head'; auto. rewrite replace_head. rewrite
-replace_head'; auto. rewrite replace_head'; auto. 
-rewrite update_nodomain; auto. repeat (rewrite replace_not_in); auto. 
-eapply (existT _ (heap_cons l l' ne ch ih ip' ep' ine e' v n n0 n1 n2 r)).
-constructor. apply in_heap_cons.    
-constructor. intros. simpl in X0. destruct (beq_nat l0 l) eqn:l0l. destruct
-(beq_nat il l') eqn:ill'. simpl in X0. crush.   
-subst. pose r. eapply heap_cons in h; auto. exists
-h. constructor. intros. destruct X0. simpl in p0. inversion h. subst. unfold
-in_heap_rel in X. simpl in X. destruct X0. assumption.  assert (ch = update ch l
-(close v e')). symmetry. apply update_nodomain.  assumption. rewrite H0 in h.
-assert (replace beq_nat (S l') ep' (replace 
-destruct X0. eapply heap_cons;
-auto. rewrite domain_update. assumption. rewrite <- replace_domain. rewrite
-<- replace_domain. assumption. rewrite <- replace_domain. rewrite <-
-replace_domain. assumption. repeat (rewrite <- replace_domain). assumption. 
-rewrite update_nodomain; auto. repeat (rewrite replace_not_in; auto). crush.
-simpl in X. invert X. destruct (PeanoNat.Nat.eqb il l') eqn:ill'. simpl in X. invert X. 
-simpl in X. apply beq_nat_false in l0l. apply beq_nat_false in ill'. rewrite
-update_head'; auto. specialize (IHr _ _ _ _ _ _ _ _ ep' ip' v X). 
-apply in_heap_rel_lookup in X. destruct X. destruct p. destruct p. apply
-lookup_domain in e4. apply lookup_domain in e5. apply lookup_domain in e3. apply
-lookup_domain in e2.  
-pose (in_notin_neq _ _ _ e4 n). 
-pose (in_notin_neq _ _ _ e5 n0). 
-pose (in_notin_neq _ _ _ e5 n1). 
-pose (in_notin_neq _ _ _ e5 n2). 
-pose (in_notin_neq _ _ _ e2 n0). 
-pose (in_notin_neq _ _ _ e2 n1).
-pose (in_notin_neq _ _ _ e2 n2). 
-pose (in_notin_neq _ _ _ e3 n0). 
-pose (in_notin_neq _ _ _ e3 n1). 
-pose (in_notin_neq _ _ _ e3 n2). 
-repeat (rewrite replace_head'; auto). apply heap_cons;
-auto.  rewrite domain_update. assumption. repeat (rewrite <- replace_domain).
-assumption. repeat (rewrite <- replace_domain). assumption. repeat (rewrite <-
-replace_domain). assumption.
-Qed.
+intros. destruct X0. assert (env_eq ch ih r p ne nep). apply p0 in X. destruct
+X. assumption. assert (ihru := in_heap_rel_upd ch ih r l e ne t il ip ep nep ep'
+ip' v e' (λ t e ip ie ne nep, prog_eq ip p t * env_eq ch ih r p e ie * env_eq ch ih r p
+ne nep) p0 X (pair (pair H X1) X0)). destruct ihru. exists x. constructor.
+intros. apply p1 in X2. destruct X2. destruct p2. split. split. assumption. 
+invert e3. constructor. eapply in_heap_rel_update_exists in X.
+destruct X. repeat (destruct s). econstructor. apply i. apply X2. 
+destruct e2. constructor. eapply in_heap_rel_update_exists in X.  destruct X.
+repeat (destruct s).  econstructor. apply i0. apply i. Qed. 
 
-Lemma heap_eq_update' : ∀ ch ih r l e ne t il ip ep nep ep' ip' v p e'
-  (ihr : in_heap_rel ch ih r l e ne t il ip ep nep),
-  heap_eq ch ih r p → 
-  prog_eq ip' p v →
-  env_eq ch ih r p e' ep' →
-  heap_eq (update ch l (close v e'))
-          (replace beq_nat (S il) ep' (replace beq_nat il ip' ih))
-          (in_heap_rel_upd ch ih r l e ne t il ip ep nep ep' ip' (close v e') ihr)
-          p.
-intros. induce r. invert ihr. invert X. simpl. unfold in_heap_rel_up. simpl in X1.split. split. split.  simpl
-in ihr. simpl. 
-
-
+(*
 Lemma heap_rel_update' : ∀ l e ne t il ip ie ine Φ ih l' il' ep' ip' v,
   l <> l' → il <> il' → S il <> il' → S (S il) <> il' → il <> S il' → il <> S (S
   il') →
@@ -608,7 +590,6 @@ edestruct (@replace_head_exists nat). rewrite e2 in *. clear e2.
 edestruct (@replace_head_exists nat). rewrite e2 in *. clear e2. 
 edestruct (@replace_head_exists nat). rewrite e2 in *. clear e2. 
 edestruct IHX. invert X0. invert e1.  
-*)
 Lemma env_eq_update' : ∀ Φ p ih l il e ep ip c ie ine' ie' ip' t ne e', 
   clos_eq c Φ ip ep p ih →
   heap_rel l e' ne t il ip' ie' ine' Φ ih →  
@@ -642,7 +623,6 @@ induce h0.
 apply luhdestruct (eq_nat_dec n l).
 - subst. econstructor. eapply lookup_update. apply e0.      
 Admitted.
-*)
 
 Lemma env_eq_fresh' : ∀ e Φ p ep ih f f' ip0 ep0 ne0 t e' ne',
   env_eq' e Φ p ep ih → 
@@ -670,10 +650,11 @@ apply h0. assumption.
 apply IHX1; auto. 
 apply IHX2; auto. 
 Qed.
+*)
 
-Lemma env_eq_fresh : ∀ e Φ p ep c ih f f' ip0 ep0 ne0,
-  env_eq e Φ p ep ih →
-  f ∉ domain Φ →
+Lemma env_eq_fresh : ∀ e ch p ep c ih f f' ip0 ep0 ne0,
+  env_eq ch ih r p e ep →
+  f ∉ domain ch →
   f' ∉ domain ih →
   (1+f') ∉ domain ih →
   (2+f') ∉ domain ih →
