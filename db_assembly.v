@@ -9,7 +9,7 @@ Fixpoint var_inst (i : nat) : BasicBlock := match i with
          mov (EP%0) R1 ;
          mov (EP%1) EP ;
          jump None R1
-  | S i => mov EP (EP%2) ; 
+  | S i => mov (EP%2) EP ; 
            var_inst i
   end.
 
