@@ -9,12 +9,11 @@ main theorems of correctness *)
 
 Definition compile t := assemble t 0.
 
-Theorem compile_correct (t : db.tm) v : db.closed t → cem.step (cem.I t) v → 
-  { mv : im.State & refl_trans_clos im.step (im.I (compile t)) mv *
-                    state_rel (cesm.st (cem.conf_h v) nil (cem.conf_c v))
-                              mv }.
-Admitted.
-(*Theorem compile_correct : Type := bool.
- Definition compile (t: expr.tm) : expr.closed t → { mc | trans_clos prog p }.
-*)
+Theorem compile_correct (t : db.tm) v : cem.step (cem.I t) v → 
+  sigT (λ v', refl_trans_clos im.step (im.I (compile t)) v' *
+              state_rel (cesm.st (cem.conf_h v) nil (cem.conf_c v)) v').
+intros. unfold cem.I in X. destruct v. eapply cem_cesm with (s := []) in
+X. assert (csi := eq_refl (cesm.I t)). unfold cesm.I in csi at 1. rewrite csi
+in X. simpl. apply cesm_im_assemble. assumption. Qed.
+
 

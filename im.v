@@ -47,7 +47,7 @@ Inductive State := st {
   st_h  : Heap
 }.
 
-Definition I (p : Program) : State := st (mkrf 1 0 0 0) p nil nil. 
+Definition I (p : Program) : State := st (mkrf 0 0 0 0) p nil nil. 
 
 Open Scope nat_scope. 
 Inductive read : RO → State → Ptr → Type :=

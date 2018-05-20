@@ -533,150 +533,6 @@ destruct X. repeat (destruct s). econstructor. apply i. apply X2.
 destruct e2. constructor. eapply in_heap_rel_update_exists in X.  destruct X.
 repeat (destruct s).  econstructor. apply i0. apply i. Qed. 
 
-(*
-Lemma heap_rel_update' : ∀ l e ne t il ip ie ine Φ ih l' il' ep' ip' v,
-  l <> l' → il <> il' → S il <> il' → S (S il) <> il' → il <> S il' → il <> S (S
-  il') →
-  heap_rel l e ne t il ip ie ine Φ ih →
-  heap_rel l e ne t il ip ie ine (update Φ l' v) (replace beq_nat (S il') ep'
-  (replace beq_nat il' ip' ih)).
-intros. induce X. rewrite update_head'; auto. repeat (rewrite replace_head');
-auto. constructor.  
-+ subst. destruct c'. edestruct update_head_exists. rewrite e1. 
-edestruct (@replace_head_exists nat). rewrite e2. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2. clear e2. 
-constructor; auto. 
-Qed.
-  
-Open Scope type_scope. 
-Lemma heap_rel_update : ∀ l e ne t il ip ie ine Φ ih
-                          l' e' ne' t' il' ip' ie' ine'
-                          t'' e'' ie'' ip'',
-  heap_rel l e ne t il ip ie ine Φ ih →  
-  heap_rel l' e' ne' t' il' ip' ie' ine' Φ ih →
-  ∃ ne, heap_rel l' e'' ne' t'' il' ip'' ie'' ine'
-        (update Φ l (close t'' e'')) 
-        (replace beq_nat (S il) ie''
-        (replace beq_nat il ip'' ih))) 
-                      +
-  ((l <> l') * (il <> il') * heap_rel l' e' ne' t' il' ip' ie' ine'
-        (update Φ l (close t'' e''))
-        (replace beq_nat (S il) ie''
-        (replace beq_nat il ip'' ih))).
-intros. induce X. induce X0. invert H1. invert H0. apply inl. split; auto.
-rewrite update_head. rewrite replace_head. rewrite replace_head'; auto. rewrite
-replace_head'; auto. rewrite replace_head. rewrite replace_head'. rewrite
-replace_head'; auto. constructor. crush. invert H1. invert H0. apply inr. split;
-auto. rewrite update_head. rewrite replace_head. rewrite replace_head'; auto.
-rewrite replace_head'; auto. rewrite replace_head. repeat (rewrite
-replace_head'; auto).  constructor; auto.  apply heap_rel_update'. auto. auto.
-auto. auto. auto. auto.  auto. crush. auto. crush. 
-simpl in X0. destruct c'. apply heap_rel_update' with (l':=l) (v:=close t''
-e'') (il':=l') (ep':=ie'') (ip':=ip'') in X0. 
-rewrite update_head'; auto. repeat (rewrite replace_head'; auto). 
-rewrite update_head' in X0; auto.  repeat (rewrite replace_head' in X0;
-auto).    
-edestruct IHX . eapply heap_rel_update' in X. eapply X. 
-edestruct update_head_exists. rewrite e1 in *. 
-edestruct (@replace_head_exists nat). rewrite e2 in *. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2 in *. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2 in *. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2 in *. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2 in *. clear e2. 
-edestruct (@replace_head_exists nat). rewrite e2 in *. clear e2. 
-edestruct IHX. invert X0. invert e1.  
-Lemma env_eq_update' : ∀ Φ p ih l il e ep ip c ie ine' ie' ip' t ne e', 
-  clos_eq c Φ ip ep p ih →
-  heap_rel l e' ne t il ip' ie' ine' Φ ih →  
-  env_eq' e Φ p ie ih →
-  env_eq' e (update Φ l c) p ie
-    (replace beq_nat (S il) ep (replace beq_nat il ip ih)).
-intros. invert X. induce X1. constructor. eapply heap_rel_update' in h0.
-econstructor. apply h0. assumption. eapply IHX1_1. apply X0. assumption.
-assumption. eapply IHX1_2. apply X0. assumption. assumption. rewrite
-update_head. rewrite replace_head. rewrite replace_head'; auto. rewrite
-replace_head'; auto. rewrite replace_head. rewrite
-replace_head'; auto. rewrite replace_head'; auto. induce X1. constructor. induce
-h0. invert H1. invert H2. eapply en. constructor; auto. assumption. assumption.  
-eapply en. constructor. induce h0. invert H1. invert H2.  constructor; auto. eapply IHh0.
-apply p0. apply X1_1. induce X1. constructor. econstructor. 
-crush. constructor;
-auto. invert X1. 
-crush.  
-econstructor. apply heap_tail. constructor. constructor. induce X1. constructor. induce h0; intros. 
-constructor. 
- subst.  unfold update. rewrite <- beq_nat_refl.
-apply heap_head. constructor.
-induce X1; intros. apply e0. apply lu_update_none; auto.  simpl.
-apply lu_replace_none; auto. apply lu_replace_none. auto. eapply en.   
-
-
-simpl in *. 
-induce h0. 
-eapply en. 
-induce h0. 
-apply luhdestruct (eq_nat_dec n l).
-- subst. econstructor. eapply lookup_update. apply e0.      
-Admitted.
-
-Lemma env_eq_fresh' : ∀ e Φ p ep ih f f' ip0 ep0 ne0 t e' ne',
-  env_eq' e Φ p ep ih → 
-  f > 0 →
-  f ∉ domain Φ →
-  f' ∉ domain ih →
-  (1+f') ∉ domain ih →
-  (2+f') ∉ domain ih →
-  env_eq' e ((f, cl (close t e') ne')::Φ) p ep ((f',ip0)::(1+f',ep0)::(2+f',ne0)::ih).
-intros. induce X. apply e0. eapply en. 
-destruct (heap_rel_lookup _ _ _ _ _ _ _ _ _ _ h0). 
-destruct p1. destruct p1. 
-apply lookup_domain in e3.
-apply lookup_domain in e4. 
-apply lookup_domain in e2. 
-apply lookup_domain in e1. 
-constructor; try (apply neq_sym). 
-eapply in_notin_neq. apply e3. apply H0.  
-eapply in_notin_neq. apply e4. apply H1. 
-eapply in_notin_neq. apply e4. apply H2. 
-eapply in_notin_neq. apply e4. apply H3. 
-eapply in_notin_neq. apply e2. apply H1. 
-eapply in_notin_neq. apply e1. apply H1. 
-apply h0. assumption. 
-apply IHX1; auto. 
-apply IHX2; auto. 
-Qed.
-
-Close Scope type_scope.
-Lemma env_eq_fresh : ∀ ch ih p r f e ne t f' ip ep nep ip0 ep0 ne0 c l il,
-  in_heap_rel ch ih r l e ne t il ip ep nep  
-  env_eq ch ih r p e ep →
-  env_eq ((f, c)::ch) ((f',ip0)::(1+f',ep0)::(2+f',ne0)::ih) p f' →
-  env_eq ((f, c)::ch) ((f',ip0)::(1+f',ep0)::(2+f',ne0)::ih) p ep .
-intros. induce X. simpl. destruct c0. eapply ee. invert X0. intros. destruct (eq_nat_dec n
-f). subst. rewrite lookup_head in H3. invert H3. subst. 
-rewrite lookup_head' in H3; auto.
-repeat (rewrite lookup_head'; auto). apply p0. apply H3. apply lookup_domain in e1. eapply in_notin_neq. apply e1.  assumption.
-rewrite lookup_head'. rewrite lookup_head'. rewrite lookup_head'. apply e2.
-eapply in_notin_neq. apply lookup_domain in e1. apply e1. assumption. 
-eapply in_notin_neq. apply lookup_domain in e1. apply e1. assumption.  
-eapply in_notin_neq. apply lookup_domain in e1. apply e1. assumption.  
-rewrite lookup_head'. rewrite lookup_head'. rewrite lookup_head'. apply e2. 
-eapply in_notin_neq. apply lookup_domain in e2. apply e2. auto. 
-eapply in_notin_neq. apply lookup_domain in e2. apply e2. auto. 
-eapply in_notin_neq. apply lookup_domain in e2. apply e2. auto. 
-rewrite lookup_head'. rewrite lookup_head'. rewrite lookup_head'. apply e3. 
-eapply in_notin_neq. apply lookup_domain in e3. apply e3. auto. 
-eapply in_notin_neq. apply lookup_domain in e3. apply e3. auto. 
-eapply in_notin_neq. apply lookup_domain in e3. apply e3. auto. 
-assumption. apply IHX1; auto. 
-apply IHX2; auto. 
-Qed.
-*)
-
 Lemma env_eq_tail : ∀ ch ih r e ep l il c ne ip ep' nep r', 
   env_eq ch ih r e ep →
   env_eq ((l,cl c ne)::ch) 
@@ -850,10 +706,25 @@ intros v s s' r h. induce h.
     simpl. reflexivity. assumption. 
 Qed. 
 
-(*
-Lemma cesm_im_assemble : ∀ t v v', 
+Lemma state_rel_I : ∀ t, state_rel (cesm.I t) (im.I (assemble t 0)). 
+intros. unfold cesm.I. unfold im.I. apply str with (r := heap_nil). simpl.
+constructor. intros. invert X. simpl. constructor. unfold prog_eq. simpl.
+rewrite firstn_all. reflexivity. constructor. simpl. constructor. Qed. 
+
+Open Scope type_scope. 
+Lemma cesm_im_rtc : ∀ c c' s, state_rel c s →
+  refl_trans_clos cesm.step c c' →
+  sigT (λ s', refl_trans_clos im.step s s' * state_rel c' s'). 
+intros. induce X0. exists s. split. apply t_refl. assumption. eapply cesm_im in
+f; try apply X. destruct f. destruct p. apply IHX0 in s0; auto. destruct s0.
+destruct p. exists x1. split; auto. apply refl_trans_clos_app with (y0 := x0);
+auto. Qed.
+
+Lemma cesm_im_assemble : ∀ t v, 
   refl_trans_clos cesm.step (cesm.I t) v → 
-  refl_trans_clos im.step (im.I (assemble t 1)) v'.
-*)
-
-
+  sigT (λ v', refl_trans_clos im.step (im.I (assemble t 0)) v' * state_rel v v').
+intros  t v H. 
+apply cesm_im_rtc with (c := (cesm.I t)). 
+apply state_rel_I.  
+assumption.
+Qed. 
