@@ -3,11 +3,9 @@ Import ListNotations.
 Require Import Program.
 
 Open Scope nat_scope. 
-(*
 Variable new : ∀ (n:nat) (h : im.Heap), sigT (λ w:nat, 
   prod (∀ i, lt i n → (i+w) ∉ domain h)
        (w > 0)).
-*)
 
 Definition prog_eq (p : Ptr) (pr : Program) (t : tm) := 
   let subpr := assemble t p in subpr = firstn (length subpr) (skipn p pr).
@@ -67,20 +65,20 @@ Fixpoint in_heap_rel (ch : cesm.heap) (ih : im.Heap)
         else False
   end.
 
-Inductive env_eq (ch : cesm.heap) (ih : im.Heap) (r : heap_rel ch ih) (p : Program)
+Inductive env_eq (ch : cesm.heap) (ih : im.Heap) (r : heap_rel ch ih)
   : nat → Ptr → Type :=
-  | e0 : env_eq ch ih r p 0 0 
+  | e0 : env_eq ch ih r 0 0 
   | eS : ∀ l e ne t il ip ep nep, 
     in_heap_rel ch ih r l e ne t il ip ep nep →
-    env_eq ch ih r p l il.
+    env_eq ch ih r l il.
 
 Inductive heap_eq (ch : cesm.heap) (ih : im.Heap) (r : heap_rel ch ih) (p : Program) : Type:=
   | mkheap_eq : 
     (∀ l e ne t il ip ep nep, 
       in_heap_rel ch ih r l e ne t il ip ep nep →
       (prog_eq ip p t) * 
-      (env_eq ch ih r p e ep) * 
-      (env_eq ch ih r p ne nep)) → 
+      (env_eq ch ih r e ep) * 
+      (env_eq ch ih r ne nep)) → 
     heap_eq ch ih r p.
 
 (*
@@ -179,7 +177,7 @@ Inductive clos_eq (ch : cem.heap) (ih : im.Heap) (r : heap_rel ch ih) (p : Progr
                   closure → Ptr → Ptr → Type :=
   | c_eq : ∀ t e ip ep, 
            prog_eq ip p t → 
-           env_eq ch ih r p e ep →
+           env_eq ch ih r e ep →
            clos_eq ch ih r p (cem.close t e) ip ep. 
 
 Inductive stack_eq (ch : cem.heap) (ih : im.Heap) (r : heap_rel ch ih) (p : Program) : 
@@ -519,14 +517,15 @@ Lemma in_heap_rel_upd' : ∀ ch ih r l e ne t il ip ep nep ep' ip' v p e',
   in_heap_rel ch ih r l e ne t il ip ep nep →
   heap_eq ch ih r p → 
   prog_eq ip' p v →
-  env_eq ch ih r p e' ep' → 
+  env_eq ch ih r e' ep' → 
   sigT (λ r', heap_eq (update ch l (close v e'))
           (replace beq_nat (S il) ep' (replace beq_nat il ip' ih))
           r'
           p).
-intros. destruct X0. assert (env_eq ch ih r p ne nep). apply p0 in X. destruct
+intros. destruct X0. assert (env_eq ch ih r ne nep). apply p0 in X. destruct
 X. assumption. assert (ihru := in_heap_rel_upd ch ih r l e ne t il ip ep nep ep'
-ip' v e' (λ t e ip ie ne nep, prog_eq ip p t * env_eq ch ih r p e ie * env_eq ch ih r p
+ip' v e' (λ t e ip ie ne nep, prog_eq ip p t * env_eq ch ih r e ie * env_eq ch
+ih r 
 ne nep) p0 X (pair (pair H X1) X0)). destruct ihru. exists x. constructor.
 intros. apply p1 in X2. destruct X2. destruct p2. split. split. assumption. 
 invert e3. constructor. eapply in_heap_rel_update_exists in X.
@@ -650,16 +649,13 @@ apply h0. assumption.
 apply IHX1; auto. 
 apply IHX2; auto. 
 Qed.
-*)
 
-Lemma env_eq_fresh : ∀ e ch p ep c ih f f' ip0 ep0 ne0,
+Close Scope type_scope.
+Lemma env_eq_fresh : ∀ ch ih p r f e ne t f' ip ep nep ip0 ep0 ne0 c l il,
+  in_heap_rel ch ih r l e ne t il ip ep nep  
   env_eq ch ih r p e ep →
-  f ∉ domain ch →
-  f' ∉ domain ih →
-  (1+f') ∉ domain ih →
-  (2+f') ∉ domain ih →
-  env_eq f ((f, c)::Φ) p f' ((f',ip0)::(1+f',ep0)::(2+f',ne0)::ih) →
-  env_eq e ((f, c)::Φ) p ep ((f',ip0)::(1+f',ep0)::(2+f',ne0)::ih).
+  env_eq ((f, c)::ch) ((f',ip0)::(1+f',ep0)::(2+f',ne0)::ih) p f' →
+  env_eq ((f, c)::ch) ((f',ip0)::(1+f',ep0)::(2+f',ne0)::ih) p ep .
 intros. induce X. simpl. destruct c0. eapply ee. invert X0. intros. destruct (eq_nat_dec n
 f). subst. rewrite lookup_head in H3. invert H3. subst. 
 rewrite lookup_head' in H3; auto.
@@ -679,18 +675,64 @@ eapply in_notin_neq. apply lookup_domain in e3. apply e3. auto.
 assumption. apply IHX1; auto. 
 apply IHX2; auto. 
 Qed.
+*)
 
-Lemma cesm_im : ∀ v s s', 
-  state_rel s s' → 
+Lemma env_eq_tail : ∀ ch ih r e ep l il c ne ip ep' nep r', 
+  env_eq ch ih r e ep →
+  env_eq ((l,cl c ne)::ch) 
+         ((il,ip)::(S il,ep')::(S (S il),nep)::ih) r' e ep. 
+intros. invert X. constructor. dependent destruction r'. 
+econstructor. apply in_heap_rel_upd_head'. apply inr. split. apply
+in_heap_rel_lookup in X0. destruct X0. repeat (destruct p). apply
+lookup_domain in e5. apply lookup_domain in e6.  split; unfold not; intros;
+subst. apply n in e5. assumption. apply n0 in e6. assumption. rewrite
+(contractable_heap_rel _ _ r r') in X0. apply X0. Qed.  
+
+Lemma not_lookup_O : ∀ ch ih, heap_rel ch ih → lookup 0 ch = None.
+intros. induction X. auto. unfold lookup. simpl. destruct l. invert g. apply
+IHX. Qed. 
+
+Lemma var_inst_clu : ∀ v ch ih l e ip ep r1 r2 r p s t e' ne, 
+  clu v e ch = Some (l, cl (close t e') ne) →
+  env_eq ch ih r e ep →
+  (∀ l e ne t il ip ep nep, in_heap_rel ch ih r l e ne t il ip ep nep → env_eq
+  ch ih r ne nep) →
+  (sigT (λ ip', sigT (λ ep', sigT (λ l', sigT (λ nep', step_bb (var_inst v) 
+                       (im.st (mkrf ip ep r1 r2) p s ih)
+                       (im.st (mkrf ip' ep' ip' r2) p (0::l'::s) ih)
+  * in_heap_rel ch ih r l e' ne t l' ip' ep' nep'))))). 
+induction v; intros. 
+- simpl in *. destruct (lookup e ch) eqn:lue.  destruct c.  assert (X' := X).
+  destruct X. assert (r' := r). apply not_lookup_O in r'. rewrite r' in lue.
+  invert lue. assert (i' := i). apply in_heap_rel_lookup in i.  destruct i. repeat (destruct p0).
+  exists ip0, ep, il, nep. split. eapply step_push. eapply read_reg. eapply
+  step_push.  eapply read_const. eapply step_mov. eapply read_mem. simpl. apply
+  e4. apply write_reg. eapply step_mov. apply read_mem. simpl. apply e2. apply
+  write_reg.  simpl. eapply step_jump. apply read_reg. simpl. apply write_reg.
+  invert H.  subst. rewrite e3 in lue. invert lue. apply i'. invert H.   
+- simpl in H. destruct (lookup e ch) eqn:lue. destruct c. assert (X' := X). destruct X'.
+  assert (r' := r). apply not_lookup_O in r'. rewrite r' in lue. invert lue.
+  assert (i' := i).  apply in_heap_rel_lookup in i.  destruct i. repeat
+  (destruct p0).  eapply IHv in H. destruct H. destruct s0.  destruct s0.
+  destruct s0.  destruct p0. simpl. exists x, x0, x1, x2. split.  eapply step_mov.
+  apply read_mem.  simpl. apply e1. eapply write_reg. apply s0. apply i. 
+  rewrite e3 in lue.  invert lue. eapply X0. apply i'. intros. eapply X0. apply
+  X1. invert H. 
+Qed.
+
+Close Scope
+type_scope.  Lemma cesm_im : ∀ v s s', state_rel s s' → 
   cesm.step s v → 
   sigT (λ v', prod (refl_trans_clos im.step s' v') (state_rel v v')).
 intros v s s' r h. induce h. 
-- invert r. invert X. simpl in *. invert X0. destruct s'. simpl in *. subst.  
-  exists (st (upd R1 ep st_rf) st_p is 
-    (replace beq_nat (1 + ep) (im.ep st_rf) (replace beq_nat ep (ip st_rf) st_h))). 
+- invert r. invert X0. simpl in *. destruct s'. simpl in *. invert X1. inversion
+  st_rf. simpl in *. 
+  exists (st (upd R1 il st_rf) st_p is 
+    (replace beq_nat (1 + il) (im.ep st_rf) (replace beq_nat il (im.ip st_rf) st_h))). 
+    simpl. 
   split.  
   + destruct st_rf; simpl in *. 
-    invert H6.  destruct (skipn ip st_p) eqn:snip. invert H0. 
+    invert H3.  destruct (skipn ip1 st_p) eqn:snip. invert H0. 
     invert H0.  destruct l0. invert H2. invert H2. 
     eapply t_step. 
     eapply enter.
@@ -720,66 +762,76 @@ intros v s s' r h. induce h.
     econstructor.
     simpl.
     apply t_refl. 
-  + destruct st_rf; simpl in *. induce X1. 
-      destruct (eq_nat_dec n l). 
-    * subst. constructor; simpl. constructor. assumption. econstructor. 
-      eapply lookup_update. apply e0. 
-      destruct (eq_nat_dec p (S ep)). 
-      ** subst.  eapply lookup_replace. apply lookup_replace'. apply e1. auto.
-      ** apply lookup_replace'. 
-         destruct (eq_nat_dec p ep). subst. eapply lookup_replace.  apply
-         (lookup  destruct induce X1. 
-  assumption.*)
-- generalize dependent e0. generalize dependent r. generalize dependent e.
-  generalize dependent l. generalize dependent e'. generalize dependent s'.
-  generalize dependent c. induction v; intros. 
-  * invert r. invert X. destruct s'. simpl in *. invert H6. destruct (skipn (ip
-  st_rf) st_p) eqn:skip. invert H0. invert H0. apply skipn_nth_error in skip.
-  simpl in *. destruct (lookup e Φ) eqn:luΦ. Focus 2. invert e0. destruct c0. invert e0. invert X1.
-  rewrite luΦ in H.  invert H. destruct st_rf; simpl in *. exists (st (mkrf ip
-  e'0 ip r2) st_p (0::ep::st_s) st_h). split. 
-    + eapply t_step. eapply enter.
-      constructor. apply skip. eapply step_push. constructor. eapply step_push.
-      constructor. eapply step_mov. simpl. eapply read_mem. simpl. apply H0.  constructor.
-      eapply step_mov. constructor. simpl. apply H1. constructor.  eapply
-      step_jump. constructor. constructor. simpl. eapply t_refl.  
-    + constructor; simpl. constructor. assumption. assumption. constructor;
-      auto.   
-  * simpl in e0. destruct (lookup e Φ) eqn:lue. destruct c0. eapply (IHv _ _ _ _
-    _ _ e0). invert e0.  
-- destruct s'. invert r. simpl in *. invert X. invert X0. destruct st_rf. simpl
+  + destruct st_rf; simpl in *. assert (x0 := X0). eapply in_heap_rel_upd' in X0. destruct X0.
+    eapply str.  
+    * simpl. apply h. 
+    * simpl. constructor; simpl. assumption. invert X2. constructor.
+      eapply in_heap_rel_update_exists in x0; try apply X0. 
+      destruct x0. repeat (destruct s0). 
+      apply (eS _ _ _ e x1 ne0 x0 ep0 x2 x3 nep). 
+      apply i. 
+    * simpl. induction X3. constructor. eapply
+      in_heap_rel_update_exists in x0; try apply i. destruct x0. repeat
+      (destruct s). eapply stack_upd. apply i0. apply IHX3. apply stack_arg.
+      assumption. destruct c. invert c0. apply c_eq. assumption. destruct X0.
+      constructor. eapply in_heap_rel_update_exists in x0; try apply
+      i. destruct x0. repeat destruct s. eapply eS. apply i0. assumption.  
+    * assumption. 
+    * assumption. 
+    * assumption. 
+- invert r. simpl in *. destruct s'. destruct st_rf. simpl in *. destruct c.
+  apply (var_inst_clu v Φ st_h l e ip ep r1 r2 r0 st_p st_s cl_tm cl_en e') in e1. destruct
+  e1. destruct s0.  destruct s0. destruct s0. destruct p. exists (im.st (mkrf x
+  x0 x r2) st_p (0::x1::st_s) st_h).  split. invert X0. invert H3. destruct
+  (skipn ip st_p) eqn:skip. invert H0. invert H0. eapply t_step. eapply enter.
+  apply read_reg.  simpl. apply skipn_nth_error in skip. apply skip. apply s0.
+  apply t_refl.  apply str with (r := r0); simpl in *. auto. destruct X. apply p
+  in i. destruct i. destruct p0. constructor; auto. eapply stack_upd. apply i.
+  assumption. invert X0. assumption. intros. destruct X. apply p in X2. destruct
+  X2. destruct p0. assumption.   
+- destruct s'. invert r. simpl in *. invert X0. invert X1. destruct st_rf. simpl
   in *. destruct (new 3 st_h) as [f' ff']. exists (st (mkrf (3+ip0) f' ip f')
   st_p is ((f',ip)::(1+f',ep)::(2+f',ep0)::st_h)). split. 
-  + eapply t_step. eapply enter; simpl. constructor. simpl. invert H6. destruct
-  (skipn ip0 st_p) eqn:skip. invert H0. invert H0. apply skipn_nth_error in
-  skip. apply skip. eapply step_pop. constructor. eapply step_jumpS.
-  simpl. apply H5. simpl. eapply (read_reg R1 (st (mkrf ip0 ep0 ip r2) st_p (ep::is) st_h)). 
-  constructor. constructor. simpl. eapply t_step. eapply enter. constructor. 
-  simpl. invert H6. destruct (skipn ip0 st_p) eqn:skip. invert H0. destruct l.
-  invert H0. destruct l. invert H0. invert H0. apply skipn_nth_error_2 in skip.
-  apply skip. eapply step_new. apply ff'. econstructor. repeat (econstructor).
-  unfold rff. unfold upd. unfold im.r2. unfold st_rf. unfold im.ep. unfold
-  im.r1. unfold zeroes. unfold app. rewrite (fresh_closure ip ep ep0 f'). apply
-  t_refl. apply ff'.
-  + constructor; simpl. constructor. unfold prog_eq. invert H6. destruct (skipn
-    ip0 st_p) eqn:sn. invert H0. invert H0. destruct l. invert H2. invert H2.
-    destruct l. invert H1. invert H1. rewrite H2 at 1. f_equal. symmetry. eapply
-    skipn_3_skipn. apply sn. destruct c. econstructor. rewrite lookup_head.
-    reflexivity. apply lookup_head. simpl. rewrite lookup_head'; auto. apply
-    lookup_head. rewrite lookup_head'; auto. rewrite lookup_head'; auto. apply
-    lookup_head. simpl. crush. crush. invert X. assumption. apply env_eq_fresh;
-    auto. invert X. assumption. apply (ff' 0). auto. apply env_eq_fresh; auto. 
-    apply (ff' 0). auto. induction X2. constructor. constructor. apply IHX2;
-    auto. constructor. assumption. destruct c1. constructor. assumption.
-    apply env_eq_fresh; auto. apply (ff' 0). auto. apply IHX2; auto. 
-- invert r. invert X. destruct s'. simpl in *. destruct st_rf. simpl in *.
-  invert H6. destruct (skipn ip st_p) eqn:skip. invert H0. remember (skipn_nth_error
-  _ _ _ _ skip). clear Heqe0. exists (st (mkrf (S ip) ep r1 r2) st_p (S ip + length (assemble
+  + eapply t_step. eapply enter; simpl. constructor. simpl. invert H3. destruct
+    (skipn ip0 st_p) eqn:skip. invert H0. invert H0. apply skipn_nth_error in
+    skip. apply skip. eapply step_pop. constructor. eapply step_jumpS.
+    apply H2. simpl. eapply (read_reg R1 (st (mkrf ip0 ep0 ip r2) st_p (ep::is) st_h)). 
+    constructor. constructor. simpl. eapply t_step. eapply enter. constructor. 
+    simpl. invert H3. destruct (skipn ip0 st_p) eqn:skip. invert H0. destruct l.
+    invert H0. destruct l. invert H0. invert H0. apply skipn_nth_error_2 in skip.
+    apply skip. eapply step_new. apply ff'. apply ff'. econstructor. repeat (econstructor).
+    unfold rff. unfold upd. unfold im.r2. unfold st_rf. unfold im.ep. unfold
+    im.r1. unfold zeroes. unfold app. rewrite (fresh_closure ip ep ep0 f'). apply
+    t_refl. apply ff'.
+  + destruct c. assert (r' := heap_cons f f' e Φ st_h ip ep ep0 cl_en cl_tm).
+    assert (r0' := r0). apply r' in r0'; auto; try (apply ff'). clear r'.
+    apply str with (r:=r0'); simpl; dependent destruction r0'. constructor.
+    intros. apply in_heap_rel_upd_head in X1. destruct X1. repeat (destruct p).
+    subst. invert X0.  split; auto. split; auto. apply env_eq_tail with (r :=
+    r0). auto. apply env_eq_tail with (r := r0). auto. repeat (destruct p).  
+    destruct X. rewrite (contractable_heap_rel _  _ r0' r0) in i0. apply p in
+    i0. destruct i0. destruct p0. split; auto. split; auto. apply env_eq_tail
+    with (r := r0); auto. apply env_eq_tail with (r := r0); auto. constructor. 
+    invert H3. destruct (skipn ip0 st_p) eqn:sn. invert H0. invert H0. destruct
+    l. invert H3. invert H3.  destruct l. invert H1. invert H1. unfold prog_eq.
+    rewrite H3 at 1.  f_equal. symmetry. eapply
+    skipn_3_skipn. apply sn. econstructor. apply in_heap_head. induction X3.
+    constructor. eapply stack_upd. apply in_heap_rel_upd_head'. apply inr.
+    split. apply in_heap_rel_lookup in i0. destruct i0. repeat (destruct p). 
+    apply lookup_domain in e4. apply lookup_domain in e5. split; unfold not;
+    intros; subst. apply n in e4; auto. apply n0 in e5. auto. rewrite
+    (contractable_heap_rel _ _ r0' r0). apply i0. apply IHX3. constructor.
+    assumption. destruct c0. constructor. assumption. apply env_eq_tail with (r
+    := r0). auto. apply IHX3. destruct ff'. apply (n 0); auto. destruct ff'.
+    apply (n 1); auto. destruct ff'. apply (n 2); auto. 
+- invert r. invert X0. destruct s'. simpl in *. destruct st_rf. simpl in *.
+  invert H3. destruct (skipn ip st_p) eqn:skip. invert H0. assert (sn := skipn_nth_error
+  _ _ _ _ skip). exists (st (mkrf (S ip) ep r1 r2) st_p (S ip + length (assemble
   m (S ip))::ep::st_s) st_h). invert H0. split. 
   + eapply t_step.  
     econstructor. 
     constructor.
-    simpl. apply e0.  
+    simpl. apply sn.  
     econstructor. 
     econstructor. 
     econstructor. 
@@ -788,7 +840,7 @@ intros v s s' r h. induce h.
     econstructor.
     econstructor. 
     apply t_refl.  
-  + constructor; simpl. constructor. unfold prog_eq. apply firstn_app_length in
+  + apply str with (r := r0); simpl. auto. constructor. unfold prog_eq. apply firstn_app_length in
     H2. destruct H2. rewrite H at 1. simpl. induction st_p. destruct ip. invert
     skip. invert skip. destruct ip. invert skip. simpl. reflexivity. simpl in
     skip. apply skipn_cons' in skip.  rewrite skip. reflexivity. assumption.
@@ -796,8 +848,7 @@ intros v s s' r h. induce h.
     firstn_app_length in H2. destruct H2. apply skipn_cons' in skip. subst.
     rewrite H0 at 1. f_equal. rewrite skipnm_add. rewrite PeanoNat.Nat.add_comm.
     simpl. reflexivity. assumption. 
-Admitted.
-
+Qed. 
 
 (*
 Lemma cesm_im_assemble : ∀ t v v', 
