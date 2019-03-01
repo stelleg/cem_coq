@@ -576,56 +576,29 @@ induction v; intros.
   X1. invert H. 
 Qed.
 
-Close Scope
-type_scope.  Lemma cesm_im : ∀ v s s', state_rel s s' → 
+Close Scope type_scope.  
+Lemma cesm_im : ∀ v s s', state_rel s s' → 
   cesm.step s v → 
   sigT (λ v', prod (refl_trans_clos im.step s' v') (state_rel v v')).
 intros v s s' r h. induce h. 
 - invert r. invert X0. simpl in *. destruct s'. simpl in *. invert X1. inversion
-  st_rf. simpl in *. 
-  exists (st (upd R1 il st_rf) st_p is 
-    (replace beq_nat (1 + il) (im.ep st_rf) (replace beq_nat il (im.ip st_rf) st_h))). 
-    simpl. 
-  split.  
-  + destruct st_rf; simpl in *. 
-    invert H3.  destruct (skipn ip1 st_p) eqn:snip. invert H0. 
-    invert H0.  destruct l0. invert H2. invert H2. 
-    eapply t_step. 
-    eapply enter.
-    constructor. 
-    apply skipn_nth_error in snip.
-    simpl. eapply snip. 
-    econstructor. 
-    econstructor. 
-    econstructor. 
-    econstructor. 
-    eapply write_reg. 
-    econstructor. 
-    econstructor. 
-    econstructor. 
-    apply skipn_nth_error_1 in snip.
-    apply snip. 
-    econstructor. 
-    econstructor. 
-    econstructor. 
-    econstructor. 
-    econstructor.
-    econstructor.
-    econstructor.
-    econstructor.
-    econstructor.
-    econstructor.
-    econstructor.
-    simpl.
-    apply t_refl. 
-  + destruct st_rf; simpl in *. assert (x0 := X0). eapply in_heap_rel_upd' in X0. destruct X0.
-    eapply str.  
+  st_rf. simpl in *.  exists (st (upd R1 il st_rf) st_p is (replace beq_nat (1 +
+  il) (im.ep st_rf) (replace beq_nat il (im.ip st_rf) st_h))).  simpl.  split.  
+  + destruct st_rf; simpl in *.  invert H3.  destruct (skipn ip1 st_p) eqn:snip.
+    invert H0.  invert H0.  destruct l0. invert H2. invert H2.  eapply t_step.
+    eapply enter.  constructor.  apply skipn_nth_error in snip.  simpl. eapply
+    snip.  econstructor.  econstructor.  econstructor.  econstructor.  eapply
+    write_reg.  econstructor.  econstructor.  econstructor.  apply
+    skipn_nth_error_1 in snip.  apply snip.  econstructor.  econstructor.
+    econstructor.  econstructor.  econstructor.  econstructor.  econstructor.
+    econstructor.  econstructor.  econstructor.  econstructor.  simpl.  apply
+    t_refl. 
+  + destruct st_rf; simpl in *. assert (x0 := X0). eapply in_heap_rel_upd' in
+    X0. destruct X0.  eapply str.  
     * simpl. apply h. 
     * simpl. constructor; simpl. assumption. invert X2. constructor.
-      eapply in_heap_rel_update_exists in x0; try apply X0. 
-      destruct x0. repeat (destruct s0). 
-      apply (eS _ _ _ e x1 ne0 x0 ep0 x2 x3 nep). 
-      apply i. 
+      eapply in_heap_rel_update_exists in x0; try apply X0.  destruct x0. repeat
+      (destruct s0).  apply (eS _ _ _ e x1 ne0 x0 ep0 x2 x3 nep).  apply i. 
     * simpl. induction X3. constructor. eapply
       in_heap_rel_update_exists in x0; try apply i. destruct x0. repeat
       (destruct s). eapply stack_upd. apply i0. apply IHX3. apply stack_arg.
@@ -655,12 +628,12 @@ intros v s s' r h. induce h.
     constructor. constructor. simpl. eapply t_step. eapply enter. constructor. 
     simpl. invert H3. destruct (skipn ip0 st_p) eqn:skip. invert H0. destruct l.
     invert H0. destruct l. invert H0. invert H0. apply skipn_nth_error_2 in skip.
-    apply skip. eapply step_new. apply ff'. apply ff'. econstructor. repeat (econstructor).
-    unfold rff. unfold upd. unfold im.r2. unfold st_rf. unfold im.ep. unfold
-    im.r1. unfold zeroes. unfold app. rewrite (fresh_closure ip ep ep0 f'). apply
-    t_refl. apply ff'.
+    apply skip. eapply step_new. apply ff'. apply ff'. econstructor.  repeat
+    (econstructor).  unfold rff. unfold upd.  unfold im.r2. unfold st_rf. unfold
+    im.ep. unfold im.r1. unfold zeroes.  unfold app. rewrite (fresh_closure ip
+    ep ep0 f'). apply t_refl. apply ff'.
   + destruct c. assert (r' := heap_cons f f' e Φ st_h ip ep ep0 cl_en cl_tm).
-    assert (r0' := r0). apply r' in r0'; auto; try (apply ff'). clear r'.
+  assert (r0' := r0). apply r' in r0'; auto; try (apply ff'). clear r'.
     apply str with (r:=r0'); simpl; dependent destruction r0'. constructor.
     intros. apply in_heap_rel_upd_head in X1. destruct X1. repeat (destruct p).
     subst. invert X0.  split; auto. split; auto. apply env_eq_tail with (r :=
@@ -684,18 +657,9 @@ intros v s s' r h. induce h.
   invert H3. destruct (skipn ip st_p) eqn:skip. invert H0. assert (sn := skipn_nth_error
   _ _ _ _ skip). exists (st (mkrf (S ip) ep r1 r2) st_p (S ip + length (assemble
   m (S ip))::ep::st_s) st_h). invert H0. split. 
-  + eapply t_step.  
-    econstructor. 
-    constructor.
-    simpl. apply sn.  
-    econstructor. 
-    econstructor. 
-    econstructor. 
-    econstructor. 
-    econstructor. 
-    econstructor.
-    econstructor. 
-    apply t_refl.  
+  + eapply t_step.  econstructor.  constructor.  simpl. apply sn.  econstructor.
+    econstructor.  econstructor.  econstructor.  econstructor.  econstructor.
+    econstructor.  apply t_refl.  
   + apply str with (r := r0); simpl. auto. constructor. unfold prog_eq. apply firstn_app_length in
     H2. destruct H2. rewrite H at 1. simpl. induction st_p. destruct ip. invert
     skip. invert skip. destruct ip. invert skip. simpl. reflexivity. simpl in
