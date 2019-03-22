@@ -12,10 +12,10 @@ Inductive step : configuration → configuration → Type :=
             ⟨Φ⟩M ⇓n ⟨Ψ⟩v →
     ⟨Φ⟩close (var y) z ⇓n ⟨Ψ⟩v
   | Abs : ∀ N Φ e, ⟨Φ⟩close (:λN) e ⇓n ⟨Φ⟩close (:λN) e
-  | App : ∀ N M B Φ Ψ Υ e ne v, 
+  | App : ∀ N M B B' Φ Ψ Υ f e ne ae, isfresh (domain Ψ) f → 
           ⟨Φ⟩close M e ⇓n ⟨Ψ⟩close (:λB) ne → 
-    (let f := earg (fresh (domain Ψ)) in ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓n ⟨Υ⟩v)  →
-              ⟨Φ⟩close (M@N) e ⇓n ⟨Υ⟩v 
+      ⟨Ψ, f ↦ {close N e, ne}⟩close B f ⇓n ⟨Υ⟩close (:λB') ae   →
+              ⟨Φ⟩close (M@N) e ⇓n ⟨Υ⟩close (:λB') ae
 where " c1 '⇓n' c2 " := (step c1 c2).
 
 Variable id_const app_const : nat.
@@ -23,31 +23,33 @@ Variable id_const app_const : nat.
 Fixpoint time_cost {c1 c2} (s : step c1 c2) : nat := match s with 
   | Id _ _ _ _ _ v _ _ lu th => id_const * v + time_cost th
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
+  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => app_const + time_cost m + time_cost b
   end. 
 
 Fixpoint stack_cost {c1 c2} (s : step c1 c2) : nat := match s with
   | Id _ _ _ _ _ _ _ _ v e => 2 + stack_cost e
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ m b => 2 + max (stack_cost m) (stack_cost b)
+  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 2 + max (stack_cost m) (stack_cost b)
   end.
 
 Fixpoint heap_cost {c1 c2} (s : step c1 c2) : nat := match s with
   | Id _ _ _ _ _ _ _ _ lu e => heap_cost e
   | Abs _ _ _ => 0
-  | App _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
+  | App _ _ _ _ _ _ _ _ _ _ _ _ m b => 3 + heap_cost m + heap_cost b
   end.
 
 Definition configuration' := sigT well_formed.
 Definition step' (c1 c2: configuration') : Type := match (c1, c2) with
   | (existT _ c1 _, existT _ c2 _) => step c1 c2 end.
 
+(*
 Definition determ : ∀ c v v', step c v → step c v' → v = v'. 
 intros. induce X. 
 - invert X0. rewrite e0 in H3. invert H3. apply IHX. assumption.
 - invert X0. reflexivity. 
 - invert X0. apply IHX in X1. invert X1. simpl in *. apply H in X2. assumption. 
 Qed. 
+*)
 
 Definition values_only : ∀ c v, step c v → value (cl_tm (conf_c v)).
 intros. induce X. 
